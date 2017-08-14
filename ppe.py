@@ -82,8 +82,6 @@ def main():
 	#
 	#	# Franz 
 
-	# test
-	#for a in range(100):
 	hoj_set = []
 	i = 0
 	for frame in all_skeleton_frames:
@@ -103,17 +101,11 @@ def main():
 
 		hoj3d,time = h3d.compute_hoj3d(list_of_joints, list_of_joints[0], list_of_joints[1], list_of_joints[16], list_of_joints[12], joint_indexes=[3, 5, 9, 6, 10, 13, 17, 14, 18], use_triangle_function=True) # hip center, spine, hip right, hip left
 
-		# testing
-		test_filename = os.path.basename(path_name) + "_{0:0=3d}".format(i)
-		h3d_t.write_hoj3d(test_filename,hoj3d)
-		i += 1
-		# break
 		hoj_set.append(np.ravel(hoj3d))
 
-	#compute in neura network
+	#compute in neural network
 	label, probability, prediction = lstm.lstm_predict(lstm_model, hoj_set)
 
-	#
 	# ----------------------------------------------------------------------------------------------------
 
 	# Let the show begin
