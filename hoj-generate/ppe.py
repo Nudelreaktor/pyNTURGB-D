@@ -66,9 +66,6 @@ def main():
 		if os.path.exists(os.path.splitext(file)[0]):
 			os.makedirs(os.path.splitext(file)[0])
 
-		time = 0.0
-		# test
-		#for a in range(100):
 		i = 0
 		for frame in all_skeleton_frames:
 			list_of_joints = frame.get_ListOfJoints()
@@ -84,18 +81,13 @@ def main():
 			# joints_to_compute.append(list_of_joints[17])		# r knee 	6
 			# joints_to_compute.append(list_of_joints[14])		# l feet 	7
 			# joints_to_compute.append(list_of_joints[18])		# r feet 	8
-			
-			# print(list_of_joints)
-			# print('\n')
+			hoj3d_set,time = h3d.compute_hoj3d(list_of_joints, list_of_joints[0], list_of_joints[1], list_of_joints[16], list_of_joints[12], joint_indexes=[3, 5, 9, 6, 10, 13, 17, 14, 18], use_triangle_function=True) # hip center, spine, hip right, hip left
 
-			hoj3d_set,time = h3d.compute_hoj3d(list_of_joints, list_of_joints[0], list_of_joints[1], list_of_joints[16], list_of_joints[12], joint_indexes=[3, 5, 9, 6, 10, 13, 17, 14, 18], use_triangle_function=True, n_time = time) # hip center, spine, hip right, hip left
-
-			# testing
+			# generate HoJ3d File
 			test_filename = os.path.splitext(file)[0] + "/" + os.path.splitext(file)[0] + "_{0:0=3d}".format(i)
 			h3d_t.write_hoj3d(test_filename,hoj3d_set)
+
 			i += 1
-			# break
-		# print(time)
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
