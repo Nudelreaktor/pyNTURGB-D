@@ -4,6 +4,7 @@
 import numpy as np
 import math as ma
 import time
+import copy as cp
 
 
 # Ppe module import
@@ -22,27 +23,41 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 	theta_bin = [-15,15,45,75,105,135,165,195]
 
 	# the historamm of joints 3D
-	hoj3d = [[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0]]
+	hoj3d = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
 
 	# get joints to compute
 	if(joint_indexes):
 		joints_to_compute = []
 		for index in joint_indexes:
-			joints_to_compute.append(list_of_joints[index])
+			joints_to_compute.append(cp.deetcopy(list_of_joints[index]))
 	else:
 		joints_to_compute = list_of_joints
 	
-
 	# assign probability function
 	probability_function = p_function
 	if(use_triangle_function):
 		probability_function = trinangle_function
+
+	# calculate radius for the inner zylinder
+	#			sholder								elbow
+	left_upper_arm = np.array(list_of_joints[4].get_WorldJoint()) - np.array(list_of_joints[5].get_WorldJoint())
+	#			elbow								hand
+	left_under_arm = np.array(list_of_joints[5].get_WorldJoint()) - np.array(list_of_joints[6].get_WorldJoint())
+	left_arm = ma.sqrt((left_upper_arm * left_upper_arm).sum()) + ma.sqrt((left_under_arm * left_under_arm).sum())
+
+	#			sholder								elbow
+	right_upper_arm = np.array(list_of_joints[8].get_WorldJoint()) - np.array(list_of_joints[9].get_WorldJoint())
+	#			elbow								hand
+	right_under_arm = np.array(list_of_joints[9].get_WorldJoint()) - np.array(list_of_joints[10].get_WorldJoint())
+	right_arm = ma.sqrt((right_upper_arm * right_upper_arm).sum()) + ma.sqrt((right_under_arm * right_under_arm).sum())
+	cut_radius = ((left_arm + right_arm) / 2) / 3
+	print('cut_radius='+str(cut_radius))
 
 	#translation
 	translation_vector = np.array([-reference_join.get_WorldJoint()[0], -reference_join.get_WorldJoint()[1], -reference_join.get_WorldJoint()[2]])
@@ -70,8 +85,9 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 	y_vector = np.cross(z_vector,x_vector)
 
 	for joint in joints_to_compute:
-		r,alpha,theta = transform_coordinate(x_vector,y_vector,z_vector,joint.get_WorldJoint())
-		
+		r,flat_r,alpha,theta = transform_coordinate(x_vector,y_vector,z_vector,joint.get_WorldJoint())
+		inner, outer = r_function(flat_r, cut_radius)
+
 		j = 0
 		for t in theta_bin:
 			if(t >= 180):
@@ -92,7 +108,8 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 					probability = abs((probability_function(alpha,(alpha_bin[i+1]+alpha_bin[i])/2))) * abs((probability_function(theta,(theta_bin[j+1]+theta_bin[j])/2)))
 
 					# print(probability)
-					hoj3d[j][i] += probability
+					hoj3d[j][(i * 2)] += probability * inner
+					hoj3d[j][(i * 2)+1] += probability * outer
 
 				# wrap around the sphere
 				if((alpha+360 - a <= 60) or (alpha-360 - a >= -30)):
@@ -100,12 +117,15 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 						probability = abs((probability_function(alpha+360,(alpha_bin[i+1]+alpha_bin[i])/2))) * abs((probability_function(theta,(theta_bin[j+1]+theta_bin[j])/2)))
 
 						# print(probability)
-						hoj3d[j][i] += probability
+						hoj3d[j][(i * 2)] += probability * inner
+						hoj3d[j][(i * 2)+1] += probability * outer
+
 					elif(alpha > 330):
 						probability = abs((probability_function(alpha-360,(alpha_bin[i+1]+alpha_bin[i])/2))) * abs((probability_function(theta,(theta_bin[j+1]+theta_bin[j])/2)))
 						
 						# print(probability)
-						hoj3d[j][i] += probability
+						hoj3d[j][(i * 2)] += probability * inner
+						hoj3d[j][(i * 2)+1] += probability * outer
 
 				i += 1
 			j += 1
@@ -168,7 +188,7 @@ def transform_coordinate(x,y,z,vector):
 	if(ma.isnan(theta)):
 		theta = 0
 
-	return r, alpha, theta
+	return r, projected_r, alpha, theta
 
 def p_function(x,my):
 
@@ -191,3 +211,10 @@ def trinangle_function(x,my):
 		p = (-x + my + 30) / 30
 
 	return max(p,0)
+
+# calculate probability using radius
+def r_function(x, cut_radius = 0.15):
+	outer = 0 if x<cut_radius else 1
+	inner = 1 - outer
+
+	return inner,outer
