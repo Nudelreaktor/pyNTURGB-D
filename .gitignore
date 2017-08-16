@@ -5,3 +5,4 @@ hoj_test/
 *.pyc
 __pycache__/
 hoj-generate/__pycache__/
+*.ps1
