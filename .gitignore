@@ -6,3 +6,4 @@ hoj_test/
 __pycache__/
 hoj-generate/__pycache__/
 *.ps1
+*.png

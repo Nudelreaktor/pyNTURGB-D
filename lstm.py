@@ -9,6 +9,7 @@ from array import array
 
 # keras import
 from keras.models import Sequential
+from keras.models import load_model
 from keras.layers import Dense, Activation, LSTM
 
 # file dialog
@@ -112,13 +113,13 @@ def lstm_init(save = False):
 
 	
 	
-# use this funktion to load a trained neural ntework
+# use this funktion to load a trained neural network
 def lstm_load(filename = None):
 	if filename is not None:
 		return load_model(filename)
 
 	f = filedialog.askopenfilename(filetypes=(("Model files","*.h5"),("all files","*.*")))
-	if f is None:
+	if f is None or f is "":
 		return None
 	else:
 		return load_model(f)
