@@ -10,6 +10,7 @@ from array import array
 # keras import
 from keras.models import Sequential
 from keras.models import load_model
+from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
 
 # file dialog
@@ -21,15 +22,75 @@ from tkinter import filedialog
 def lstm_init(save = False):
 	hoj_height = 168
 	classes = 55
+	
+	##############################################
+	# Training Data                              #
+	##############################################
+	print("reading test data...")
+	directories = os.listdir("lstm_train")
+	training_data = []
+	training_labels = []
+	for directory in directories:
+		hoj_set_files = os.listdir("lstm_train/" + directory)
+		hoj_set = []
+		for hoj_file in hoj_set_files:
+			# alle laden, in einer Matrix peichern
+			file = open("lstm_train/" + directory + "/" + hoj_file,'rb')
+			hoj_array = array('d')
+			hoj_array.frombytes(file.read())
+			file.close()
 
+			hoj_set.append(np.array(hoj_array))
+			
+		# lade Labels (test output)
+		label_index = int(directory[-3:])
+		label = np.zeros(classes)
+		label[label_index] = 1
+		
+		training_data.append(np.array(hoj_set))
+		training_labels.append(label)
+	
+	print(np.array(training_data).shape)
+	print(np.array(training_data))
+	
+	
+	##############################################
+	# Validation Data                            #
+	##############################################
+	print("reading validation data...")
+	directories = os.listdir("lstm_validate")
+	validation_data = []
+	validation_labels = []
+	for directory in directories:
+		hoj_set_files = os.listdir("lstm_validate/" + directory)
+		hoj_set = []
+		for hoj_file in hoj_set_files:
+			# alle laden, in einer Matrix peichern
+			file = open("lstm_validate/" + directory + "/" + hoj_file,'rb')
+			hoj_array = array('d')
+			hoj_array.frombytes(file.read())
+			file.close()
+
+			hoj_set.append(np.array(hoj_array))
+			
+		# lade Labels (test output)
+		label_index = int(directory[-3:])
+		label = np.zeros(classes)
+		label[label_index] = 1
+		
+		validation_data.append(np.array(hoj_set))
+		validation_labels.append(label)
+		
+	print(np.array(validation_data).shape)
+		
+	print("creating neural network...")
 	# create neural network
 	# 2 Layer LSTM
 	model = Sequential()
 
 	# LSTM Schichten hinzufuegen
-	# 
-	model.add(LSTM(hoj_height, input_shape=(None,hoj_height)))
-	model.add(LSTM(hoj_height))	# vielleicht optional
+	model.add(LSTM(hoj_height, input_shape=(None,hoj_height), return_sequences=True))
+	#model.add(LSTM(hoj_height))	# vielleicht optional
 
 	# voll vernetzte Schicht zum Herunterbrechen vorheriger Ausgabedaten auf die Menge der Klassen 
 	model.add(Dense(classes))
@@ -43,63 +104,13 @@ def lstm_init(save = False):
 	optimizer = RMSprop(lr=0.01)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy',optimizer=optimizer)
-
+	
+	print("train neural network...")
 	# train neural network
-	
-	##############################################
-	# Training                                   #
-	##############################################
-	directories = os.listdir("lstm_train")
-	data = []
-	labels = []
-	for directory in directories:
-		hoj_set_files = os.listdir("lstm_train" + directory)
-		hoj_set = []
-		for hoj_file in hoj_set_files:
-			# alle laden, in einer Matrix peichern
-			hoj_array = array('d')
-			hoj_array.frombytes(hoj_file.read())
+	model.fit(np.array(training_data), training_labels, epochs=100, batch_size=32) # epochen willkuerlich; batch_size willkuerlich
+	score = model.evaluate(np.array(validation_data), validation_labels, batch_size=32) # batch_size willkuerlich
 
-			hoj_set.append(np.array(hoj_array))
-			
-		# lade Labels (test output)
-		label_index = int(directory[-3:])
-		label = np.zeros(classes)
-		label[label_index] = 1
-		
-		data.append(hoj_set)
-		labels.append(label)
-
-	model.fit(data, labels, epochs=100, batch_size=32) # epochen willkuerlich; batch_size willkuerlich
-	
-	
-	##############################################
-	# Validation                                 #
-	##############################################
-	directories = os.listdir("lstm_validate")
-	data = []
-	labels = []
-	for directory in directories:
-		hoj_set_files = os.listdir("lstm_validate" + directory)
-		hoj_set = []
-		for hoj_file in hoj_set_files:
-			# alle laden, in einer Matrix peichern
-			hoj_array = array('d')
-			hoj_array.frombytes(hoj_file.read())
-
-			hoj_set.append(np.array(hoj_array))
-			
-		# lade Labels (test output)
-		label_index = int(directory[-3:])
-		label = np.zeros(classes)
-		label[label_index] = 1
-		
-		data.append(hoj_set)
-		labels.append(label)
-		
-	score = model.evaluate(data, labels, batch_size=32) # batch_size willkuerlich
-
-	
+	print("neural Network score: " + score)
 	
 	
 	if save == True:

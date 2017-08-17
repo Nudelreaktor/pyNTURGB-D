@@ -15,7 +15,6 @@ import load_skeleton as l_S
 import load_masked_depth as l_MD
 import resultWindow as r_W
 import hoj3d as h3d
-import hoj3d_tester as h3d_t
 
 def main():
 	path_name = ""
