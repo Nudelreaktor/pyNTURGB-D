@@ -33,19 +33,19 @@ def lstm_init(save = False):
 		hoj_set = []
 		for hoj_file in hoj_set_files:
 			# alle laden, in einer Matrix peichern
-			file = open("lstm_train/" + directory + "/" + hoj_file,'rb')
+			file = open("./lstm_train/" + directory + "/" + hoj_file,'rb')
 			hoj_array = np.load(file)
 			file.close()
 
 			hoj_set.append(hoj_array)
 			
-		# lade Labels (test output)
-		label_index = int(directory[-3:])
-		label = np.zeros(classes)
-		label[label_index] = 1
+			# lade Labels (test output)
+			label = np.zeros(classes)
+			label[1] = 1
+			labels.append(label)
 		
 		training_data.append(np.array(hoj_set))
-		training_labels.append(label)
+		training_labels.append(labels)
 	
 	print(np.array(training_data).shape)
 	print(training_data)
@@ -103,15 +103,6 @@ def lstm_init(save = False):
 	
 	print("train neural network...")
 	# train neural network
-	#
-	#
-	#
-	# TODO FIT_GENERATOR
-	#
-	#
-	#
-	#
-	#
 	model.fit(training_data, training_labels, epochs=100, batch_size=32, verbose=2) # epochen willkuerlich; batch_size willkuerlich
 	score = model.evaluate(validation_data, validation_labels, batch_size=32) # batch_size willkuerlich
 
@@ -143,10 +134,15 @@ def lstm_load(filename = None):
 		
 		
 # use this funktion to evaluate data in the neural network
-def lstm_predict(lstm_model, hoj3d_set):
-	prediction = lstm_model.predict(hoj3d_set,batch_size = 1)
-	idx = nu.argmax(prediction)[0]
-	return idx,prediction[idx],prediction
+def lstm_predict(lstm_model, hoj3d):
+	hoj3d_set = []
+	hoj3d_set.append(hoj3d)
+	prediction_data = []
+	prediction_data.append(hoj3d_set)
+
+	prediction = lstm_model.predict(np.array(prediction_data),batch_size = 1)
+	idx = np.argmax(prediction)
+	return idx, prediction
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

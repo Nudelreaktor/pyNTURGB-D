@@ -103,7 +103,9 @@ def main():
 		hoj_set.append(np.ravel(hoj3d))
 
 	#compute in neural network
-	label, probability, prediction = lstm.lstm_predict(lstm_model, hoj_set)
+		label, prediction = lstm.lstm_predict(lstm_model, np.ravel(hoj3d))
+
+		print(label,prediction)
 
 	# ----------------------------------------------------------------------------------------------------
 

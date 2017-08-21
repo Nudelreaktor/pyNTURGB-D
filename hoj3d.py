@@ -35,7 +35,7 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 	if(joint_indexes):
 		joints_to_compute = []
 		for index in joint_indexes:
-			joints_to_compute.append(cp.deetcopy(list_of_joints[index]))
+			joints_to_compute.append(cp.deepcopy(list_of_joints[index]))
 	else:
 		joints_to_compute = list_of_joints
 	
