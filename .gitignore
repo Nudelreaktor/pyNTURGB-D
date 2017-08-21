@@ -7,3 +7,5 @@ __pycache__/
 hoj-generate/__pycache__/
 *.ps1
 *.png
+lstm_train_x/
+lstm_validate_x/

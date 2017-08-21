@@ -5,8 +5,6 @@ import os
 import numpy as np
 import math as ma
 
-from array import array
-
 # keras import
 from keras.models import Sequential
 from keras.models import load_model
@@ -36,11 +34,10 @@ def lstm_init(save = False):
 		for hoj_file in hoj_set_files:
 			# alle laden, in einer Matrix peichern
 			file = open("lstm_train/" + directory + "/" + hoj_file,'rb')
-			hoj_array = array('d')
-			hoj_array.frombytes(file.read())
+			hoj_array = np.load(file)
 			file.close()
 
-			hoj_set.append(np.array(hoj_array))
+			hoj_set.append(hoj_array)
 			
 		# lade Labels (test output)
 		label_index = int(directory[-3:])
@@ -51,7 +48,7 @@ def lstm_init(save = False):
 		training_labels.append(label)
 	
 	print(np.array(training_data).shape)
-	print(np.array(training_data))
+	print(training_data)
 	
 	
 	##############################################
@@ -67,11 +64,10 @@ def lstm_init(save = False):
 		for hoj_file in hoj_set_files:
 			# alle laden, in einer Matrix peichern
 			file = open("lstm_validate/" + directory + "/" + hoj_file,'rb')
-			hoj_array = array('d')
-			hoj_array.frombytes(file.read())
+			hoj_array = np.load(file)
 			file.close()
 
-			hoj_set.append(np.array(hoj_array))
+			hoj_set.append(hoj_array)
 			
 		# lade Labels (test output)
 		label_index = int(directory[-3:])
@@ -107,8 +103,17 @@ def lstm_init(save = False):
 	
 	print("train neural network...")
 	# train neural network
-	model.fit(np.array(training_data), training_labels, epochs=100, batch_size=32) # epochen willkuerlich; batch_size willkuerlich
-	score = model.evaluate(np.array(validation_data), validation_labels, batch_size=32) # batch_size willkuerlich
+	#
+	#
+	#
+	# TODO FIT_GENERATOR
+	#
+	#
+	#
+	#
+	#
+	model.fit(training_data, training_labels, epochs=100, batch_size=32, verbose=2) # epochen willkuerlich; batch_size willkuerlich
+	score = model.evaluate(validation_data, validation_labels, batch_size=32) # batch_size willkuerlich
 
 	print("neural Network score: " + score)
 	
