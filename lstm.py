@@ -142,7 +142,7 @@ def lstm_predict(lstm_model, hoj3d):
 
 	prediction = lstm_model.predict(np.array(prediction_data),batch_size = 1)
 	idx = np.argmax(prediction)
-	return idx, prediction
+	return idx,prediction[0][0][idx], prediction
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

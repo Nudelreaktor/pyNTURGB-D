@@ -43,7 +43,7 @@ def lstm_init(save = False):
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy',optimizer=optimizer)
 
-	model = lstm_train(model, epochs=1)
+	model = lstm_train(model, epochs=100)
 	score = lstm_validate(model)
 	
 	
@@ -59,7 +59,7 @@ def lstm_init(save = False):
 		# Open a save dialog
 		f = filedialog.asksaveasfilename(title="store model", filetypes=(("Model files","*.h5"),("all files","*.*")))
 		if f is not None and f is not "":
-			model.save(f)
+			model.save(f + ".h5")
 
 	return model
 	
@@ -95,8 +95,10 @@ def lstm_train(lstm_model, epochs=100, classes=61):
 				hoj_set.append(hoj_array)
 				
 				# lade Labels (test output)
+				idx = int(directory[-3:])
+
 				label = np.zeros(classes)
-				label[1] = 1
+				label[idx] = 1
 				labels.append(label)
 
 			training_data.append(hoj_set)
@@ -129,8 +131,10 @@ def lstm_validate(lstm_model, classes=61):
 			hoj_set.append(hoj_array)
 			
 			# lade Labels (test output)
+			idx = int(directory[-3:])
+
 			label = np.zeros(classes)
-			label[1] = 1
+			label[idx] = 1
 			labels.append(label)
 
 		validation_data.append(hoj_set)

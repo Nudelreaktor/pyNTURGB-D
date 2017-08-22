@@ -23,7 +23,7 @@ def main():
 	verbose = False
 
 	# Parse the command line options.
-	path_name, skeleton_name, show_stream, store_net, verbose = parseOpts( sys.argv )
+	path_name, skeleton_name, show_stream, store_net, verbose, lstm_path = parseOpts( sys.argv )
 
 
 	# Build the skeleton filename string
@@ -59,7 +59,7 @@ def main():
 		print("Leave script now.\n")
 		exit(0)
 
-	lstm_model = lstm.lstm_load()
+	lstm_model = lstm.lstm_load(filename=lstm_path)
 	if lstm_model is None:
 		print("\nERROR! No neural network!")
 		print("Leave script now.\n")
@@ -103,9 +103,9 @@ def main():
 		hoj_set.append(np.ravel(hoj3d))
 
 	#compute in neural network
-		label, prediction = lstm.lstm_predict(lstm_model, np.ravel(hoj3d))
+		label, propability, prediction = lstm.lstm_predict(lstm_model, np.ravel(hoj3d))
 
-		print(label,prediction)
+		print(label, propability)
 
 	# ----------------------------------------------------------------------------------------------------
 
@@ -127,6 +127,7 @@ def parseOpts( argv ):
 	parser.add_argument("-ss", "--show_stream", action='store_true', dest='show_stream', help="True if you want to see the image stream.")
 	parser.add_argument("-v", "--verbose", action='store_true', dest='verbose', default='False', help="True if you want to listen to the chit-chat.")
 	parser.add_argument("-sn", "--save_net", action='store_true', dest='save_net', default='False', help="True if you want to store the trained neural net.")
+	parser.add_argument("-lm", "--lstm_model", action='store', dest="lstm_path", help="The PATH to the lstm-model.")
 
 	# finally parse the command line 
 	args = parser.parse_args()
@@ -142,6 +143,10 @@ def parseOpts( argv ):
 		skeleton_name = "skeleton/S001C001P001R001A001"
 		print ("\nNo set path defined. Falling back to default path  : ", path_name )
 
+	if args.lstm_path:
+		lstm_path = args.lstm_path
+	else:
+		lstm_path = None
 
 	print ("\nConfiguration:")
 	print ("----------------------------------------------------------------------------------------------------------------------------")
@@ -149,8 +154,9 @@ def parseOpts( argv ):
 	print ("ShowStream   : ", args.show_stream)
 	print ("Store NN     : ", args.save_net)
 	print ("verbose      : ", args.verbose)
+	print ("Lstm model   : ", args.lstm_path)
 
-	return path_name, skeleton_name, args.show_stream, args.save_net, args.verbose
+	return path_name, skeleton_name, args.show_stream, args.save_net, args.verbose, lstm_path
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

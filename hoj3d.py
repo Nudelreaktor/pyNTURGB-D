@@ -57,7 +57,7 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 	right_under_arm = np.array(list_of_joints[9].get_WorldJoint()) - np.array(list_of_joints[10].get_WorldJoint())
 	right_arm = ma.sqrt((right_upper_arm * right_upper_arm).sum()) + ma.sqrt((right_under_arm * right_under_arm).sum())
 	cut_radius = ((left_arm + right_arm) / 2) / 3
-	print('cut_radius='+str(cut_radius))
+	# print('cut_radius='+str(cut_radius))
 
 	#translation
 	translation_vector = np.array([-reference_join.get_WorldJoint()[0], -reference_join.get_WorldJoint()[1], -reference_join.get_WorldJoint()[2]])
