@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import math as ma
+import argparse
 
 # keras import
 from keras.models import Sequential
@@ -18,67 +19,14 @@ from tkinter import filedialog
 
 
 def lstm_init(save = False):
+
+
+	# Parse the command line options.
+	save, lstm_path = parseOpts( sys.argv )
+
 	hoj_height = 168
-	classes = 55
-	
-	##############################################
-	# Training Data                              #
-	##############################################
-	print("reading test data...")
-	directories = os.listdir("lstm_train")
-	training_data = []
-	training_labels = []
-	for directory in directories:
-		hoj_set_files = os.listdir("lstm_train/" + directory)
-		hoj_set = []
-		for hoj_file in hoj_set_files:
-			# alle laden, in einer Matrix peichern
-			file = open("./lstm_train/" + directory + "/" + hoj_file,'rb')
-			hoj_array = np.load(file)
-			file.close()
+	classes = 61
 
-			hoj_set.append(hoj_array)
-			
-			# lade Labels (test output)
-			label = np.zeros(classes)
-			label[1] = 1
-			labels.append(label)
-		
-		training_data.append(np.array(hoj_set))
-		training_labels.append(labels)
-	
-	print(np.array(training_data).shape)
-	print(training_data)
-	
-	
-	##############################################
-	# Validation Data                            #
-	##############################################
-	print("reading validation data...")
-	directories = os.listdir("lstm_validate")
-	validation_data = []
-	validation_labels = []
-	for directory in directories:
-		hoj_set_files = os.listdir("lstm_validate/" + directory)
-		hoj_set = []
-		for hoj_file in hoj_set_files:
-			# alle laden, in einer Matrix peichern
-			file = open("lstm_validate/" + directory + "/" + hoj_file,'rb')
-			hoj_array = np.load(file)
-			file.close()
-
-			hoj_set.append(hoj_array)
-			
-		# lade Labels (test output)
-		label_index = int(directory[-3:])
-		label = np.zeros(classes)
-		label[label_index] = 1
-		
-		validation_data.append(np.array(hoj_set))
-		validation_labels.append(label)
-		
-	print(np.array(validation_data).shape)
-		
 	print("creating neural network...")
 	# create neural network
 	# 2 Layer LSTM
@@ -100,24 +48,29 @@ def lstm_init(save = False):
 	optimizer = RMSprop(lr=0.01)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy',optimizer=optimizer)
-	
-	print("train neural network...")
-	# train neural network
-	model.fit(training_data, training_labels, epochs=100, batch_size=32, verbose=2) # epochen willkuerlich; batch_size willkuerlich
-	score = model.evaluate(validation_data, validation_labels, batch_size=32) # batch_size willkuerlich
 
-	print("neural Network score: " + score)
+	model = lstm_train(model, epochs=100, classes=classes)
+	score = lstm_validate(model, classes=classes)
 	
 	
-	if save == True:
-		# save neural network
-		# Open a save dialog
-		f = filedialog.asksaveasfilename(initialdir=store_path, title="store model", filetypes=(("Model files","*.h5"),("all files","*.*")))
-		if f is not None:
-			model.save(f)
+
+	# print("neural Network score: " + score)
+
+
+	print("network creation succesful! \\(^o^)/")
+	
+	
+	if save is True:
+		if lstm_path is not None:
+			model.save(lstm_path)
+		else:
+			# save neural network
+			# Open a save dialog
+			f = filedialog.asksaveasfilename(title="store model", filetypes=(("Model files","*.h5"),("all files","*.*")))
+			if f is not None and f is not "":
+				model.save(f + ".h5")
 
 	return model
-
 	
 	
 # use this funktion to load a trained neural network
@@ -131,18 +84,101 @@ def lstm_load(filename = None):
 	else:
 		return load_model(f)
 
+#use this funktion to train the neural network
+def lstm_train(lstm_model, epochs=100, classes=61):
+	
+	print("train neural network...")
+	directories = os.listdir("lstm_train/")
+	for x in range(0,epochs):
+		print("Epoch: ", x+1, "/", epochs)
+		for directory in directories:
+			training_data, training_labels = get_hoj_data("lstm_train/" + directory, classes=classes)
+			
+			# train neural network
+			history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen willkuerlich; batch_size willkuerlich
+			print(history.history)
+	return lstm_model
+
+#use this funktion to train the neural network
+def lstm_validate(lstm_model, classes=61):
+	
+	print("evaluate neural network...")
+	directories = os.listdir("lstm_validate/")
+	for directory in directories:
+		validation_data, validation_labels = get_hoj_data("lstm_validate/" + directory, classes=classes)
 		
+		# evaluate neural network
+		score = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=32) # batch_size willkuerlich
+		print(score)
+	return score
+
+
+
+def get_hoj_data(directory, classes=61):
+	hoj_set_files = os.listdir(directory)
+	data = []
+	hoj_set = []
+	labels = []
+	for hoj_file in hoj_set_files:
+		# alle laden, in einer Matrix peichern
+		file = open(directory + "/" + hoj_file,'rb')
+		hoj_array = np.load(file)
+		file.close()
+
+		hoj_set.append(hoj_array)
+		
+		# lade Labels (test output)
+		idx = int(directory[-3:])
+
+		label = np.zeros(classes)
+		label[idx] = 1
+		labels.append(label)
+
+	data.append(hoj_set)
+
+
+	all_labels = []
+	all_labels.append(labels)
+	return data, all_labels
+
+
 		
 # use this funktion to evaluate data in the neural network
-def lstm_predict(lstm_model, hoj3d):
-	hoj3d_set = []
-	hoj3d_set.append(hoj3d)
-	prediction_data = []
-	prediction_data.append(hoj3d_set)
+def lstm_predict(lstm_model, hoj3d_set):
+	prediction = lstm_model.predict(hoj3d_set,batch_size = 1)
+	idx = nu.argmax(prediction)[0]
+	return idx,prediction[idx],prediction
 
-	prediction = lstm_model.predict(np.array(prediction_data),batch_size = 1)
-	idx = np.argmax(prediction)
-	return idx,prediction[0][0][idx], prediction
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Parse the command line arguments
+def parseOpts( argv ):
+
+	skeleton_name = ""
+
+	# generate parser object
+	parser = argparse.ArgumentParser()
+	# add arguments to the parser so he can parse the shit out of the command line
+	parser.add_argument("-t", "--test", action='store_true', dest='test_network', help="if set the created neural network won't be saved. (overites -p)")
+	parser.add_argument("-p", "--path", action='store', dest="lstm_path", help="The PATH where the lstm-model will be saved.")
+
+	# finally parse the command line 
+	args = parser.parse_args()
+
+	if args.lstm_path:
+		lstm_path = args.lstm_path
+	else:
+		lstm_path = None
+
+	print ("\nConfiguration:")
+	print ("----------------------------------------------------------------------------------------------------------------------------")
+	print ("Lstm destination   : ", args.lstm_path)
+	if args.test_network is True:
+		print("Network won't be saved!")
+	else:
+		print("Network will be saved")
+
+	return args.test_network, lstm_path
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
