@@ -47,24 +47,20 @@ def lstm_init(save = False):
 	# zur "Abkuehlung" des Netzwerkes
 	optimizer = RMSprop(lr=0.01)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
-	model.compile(loss='categorical_crossentropy',optimizer=optimizer)
+	model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
 	model = lstm_train(model, epochs=100, classes=classes)
 	score = lstm_validate(model, classes=classes)
-	
-	
-
-	# print("neural Network score: " + score)
 
 
 	print("network creation succesful! \\(^o^)/")
 	
 	
+	# save neural network
 	if save is True:
 		if lstm_path is not None:
 			model.save(lstm_path)
 		else:
-			# save neural network
 			# Open a save dialog
 			f = filedialog.asksaveasfilename(title="store model", filetypes=(("Model files","*.h5"),("all files","*.*")))
 			if f is not None and f is not "":
@@ -89,13 +85,16 @@ def lstm_train(lstm_model, epochs=100, classes=61):
 	
 	print("train neural network...")
 	directories = os.listdir("lstm_train/")
+	# Trainingsepochen
 	for x in range(0,epochs):
 		print("Epoch: ", x+1, "/", epochs)
+
+		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
 		for directory in directories:
 			training_data, training_labels = get_hoj_data("lstm_train/" + directory, classes=classes)
 			
 			# train neural network
-			history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen willkuerlich; batch_size willkuerlich
+			history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil nur ein Datensatz nach dem Anderen Trainiert wird
 			print(history.history)
 	return lstm_model
 
@@ -104,6 +103,8 @@ def lstm_validate(lstm_model, classes=61):
 	
 	print("evaluate neural network...")
 	directories = os.listdir("lstm_validate/")
+
+		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
 	for directory in directories:
 		validation_data, validation_labels = get_hoj_data("lstm_validate/" + directory, classes=classes)
 		
@@ -113,14 +114,13 @@ def lstm_validate(lstm_model, classes=61):
 	return score
 
 
-
 def get_hoj_data(directory, classes=61):
 	hoj_set_files = os.listdir(directory)
 	data = []
 	hoj_set = []
 	labels = []
+	# alle dateien laden, in einer Matrix peichern
 	for hoj_file in hoj_set_files:
-		# alle laden, in einer Matrix peichern
 		file = open(directory + "/" + hoj_file,'rb')
 		hoj_array = np.load(file)
 		file.close()
@@ -147,14 +147,12 @@ def get_hoj_data(directory, classes=61):
 def lstm_predict(lstm_model, hoj3d_set):
 	prediction = lstm_model.predict(hoj3d_set,batch_size = 1)
 	idx = nu.argmax(prediction)[0]
-	return idx,prediction[idx],prediction
+	return idx,prediction[0][0][idx],prediction
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Parse the command line arguments
 def parseOpts( argv ):
-
-	skeleton_name = ""
 
 	# generate parser object
 	parser = argparse.ArgumentParser()
@@ -178,7 +176,7 @@ def parseOpts( argv ):
 	else:
 		print("Network will be saved")
 
-	return args.test_network, lstm_path
+	return (not args.test_network), lstm_path
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
