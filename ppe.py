@@ -76,10 +76,7 @@ def main():
 	#					|_> jeder Frame enthält den Frame_header und eine Liste von Joints des zugehörigen Skeletons 
 	#
 	#	-> frameHeader.py und joint.py sollten dir weitere Informationen dazu liefern
-	#	-> Sollten weitere Fragen auftauchen -> schreib mir ne Mail, ich versuch sie trotz Urlaub so schnell wie möglich zu 
-	#	   beantworten
-	#
-	#	# Franz 
+
 
 	hoj_set = []
 	i = 0
@@ -98,11 +95,11 @@ def main():
 		# joints_to_compute.append(list_of_joints[14])		# l foot 	7
 		# joints_to_compute.append(list_of_joints[18])		# r foot 	8
 
-		hoj3d,time = h3d.compute_hoj3d(list_of_joints, list_of_joints[0], list_of_joints[1], list_of_joints[16], list_of_joints[12], joint_indexes=[3, 5, 9, 6, 10, 13, 17, 14, 18], use_triangle_function=True) # hip center, spine, hip right, hip left
+		hoj3d,time = h3d.compute_hoj3d(list_of_joints, list_of_joints[0], list_of_joints[1], list_of_joints[16], list_of_joints[12], joint_indexes=[3, 5, 9, 6, 10, 13, 17, 14, 18], use_triangle_function=True, verbose=verbose) # hip center, spine, hip right, hip left
 
 		hoj_set.append(np.ravel(hoj3d))
 
-	#compute in neural network
+		#compute in neural network
 		label, propability, prediction = lstm.lstm_predict(lstm_model, np.ravel(hoj3d))
 
 		print(label, propability)

@@ -13,7 +13,7 @@ import joint
 
 
 # Die Basisfunktion des Modules
-def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_join_left, reference_join_right, joint_indexes = [], use_triangle_function = False, n_time = 0.0):
+def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_join_left, reference_join_right, joint_indexes = [], use_triangle_function = False, n_time = 0.0, verbose=False):
 
 	t0 = time.time()
 
@@ -57,12 +57,12 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 	right_under_arm = np.array(list_of_joints[9].get_WorldJoint()) - np.array(list_of_joints[10].get_WorldJoint())
 	right_arm = ma.sqrt((right_upper_arm * right_upper_arm).sum()) + ma.sqrt((right_under_arm * right_under_arm).sum())
 	cut_radius = ((left_arm + right_arm) / 2) / 3
-	# print('cut_radius='+str(cut_radius))
+	
+	if verbose:
+		print('cut_radius='+str(cut_radius))
 
 	#translation
 	translation_vector = np.array([-reference_join.get_WorldJoint()[0], -reference_join.get_WorldJoint()[1], -reference_join.get_WorldJoint()[2]])
-
-	# print(translation_vector)
 
 	for joint in joints_to_compute:
 		point = np.array(joint.get_WorldJoint())
@@ -131,11 +131,9 @@ def compute_hoj3d( list_of_joints, reference_join, reference_join_up, reference_
 			j += 1
 
 	# debug print
-	#np.set_printoptions(precision = 3,suppress = True)
-	#print(np.array(hoj3d))
-
-	#hoj = np.array(hoj3d)
-	#print(hoj.sum())
+	if verbose:
+		np.set_printoptions(precision = 3,suppress = True)
+		print(np.array(hoj3d))
 
 	t1 = time.time()
 	n_time += t1 - t0
