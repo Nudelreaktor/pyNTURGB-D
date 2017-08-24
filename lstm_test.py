@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
+from keras.utils import plot_model
 
 # file dialog
 import tkinter as tk
@@ -25,8 +26,8 @@ def lstm_init(save = False):
 	# Parse the command line options.
 	save, lstm_path = parseOpts( sys.argv )
 
-	hoj_height = 168
-	classes = 61
+	hoj_height = 4
+	classes = 5
 
 	print("creating neural network...")
 	# create neural network
@@ -34,8 +35,8 @@ def lstm_init(save = False):
 	model = Sequential()
 
 	# LSTM Schichten hinzufuegen
-	model.add(LSTM(hoj_height, input_shape=(None,hoj_height), return_sequences=True))
-	#model.add(LSTM(hoj_height))	# vielleicht optional
+	model.add(LSTM(hoj_height, input_shape=(3,hoj_height), return_sequences=True))
+	model.add(LSTM(hoj_height))	# vielleicht optional
 
 	# voll vernetzte Schicht zum Herunterbrechen vorheriger Ausgabedaten auf die Menge der Klassen 
 	model.add(Dense(classes))
@@ -50,7 +51,9 @@ def lstm_init(save = False):
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
-	model = lstm_train(model, epochs=100, classes=classes)
+	plot_model(model, to_file='model.png', show_shapes=True)
+
+	model = lstm_train(model, epochs=1, classes=classes)
 	score = lstm_validate(model, classes=classes)
 
 
@@ -89,14 +92,21 @@ def lstm_train(lstm_model, epochs=100, classes=61):
 	# Trainingsepochen
 	for x in range(0,epochs):
 		print("Epoch: ", x+1, "/", epochs)
+		training_data = []
+		training_labels = []
 
 		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
 		for directory in directories:
-			training_data, training_labels = get_hoj_data("lstm_train/" + directory, classes=classes)
+			hoj_set, labels = get_hoj_data("lstm_train/" + directory, classes=classes)
+			training_data.append(hoj_set)
+			training_labels.append(labels)
+
+		print(training_data)
+		print(training_labels)
 			
-			# train neural network
-			history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil nur ein Datensatz nach dem Anderen Trainiert wird
-			print(history.history)
+		# train neural network
+		history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=2) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil nur ein Datensatz nach dem Anderen Trainiert wird
+		print(history.history)
 	return lstm_model
 
 #use this funktion to train the neural network
@@ -135,12 +145,9 @@ def get_hoj_data(directory, classes=61):
 		label[idx] = 1
 		labels.append(label)
 
-	data.append(hoj_set)
 
 
-	all_labels = []
-	all_labels.append(labels)
-	return data, all_labels
+	return hoj_set, label
 
 
 		
