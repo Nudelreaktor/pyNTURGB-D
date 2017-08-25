@@ -12,7 +12,6 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
-from keras.utils import plot_model
 
 # file dialog
 import tkinter as tk
@@ -24,10 +23,7 @@ def lstm_init(save = False):
 
 
 	# Parse the command line options.
-	save, lstm_path = parseOpts( sys.argv )
-
-	hoj_height = 4
-	classes = 5
+	save, lstm_path, epochs, classes, hoj_height = parseOpts( sys.argv )
 
 	print("creating neural network...")
 	# create neural network
@@ -35,8 +31,8 @@ def lstm_init(save = False):
 	model = Sequential()
 
 	# LSTM Schichten hinzufuegen
-	model.add(LSTM(hoj_height, input_shape=(3,hoj_height), return_sequences=True))
-	model.add(LSTM(hoj_height))	# vielleicht optional
+	model.add(LSTM(hoj_height, input_shape=(None,hoj_height), return_sequences=True))
+	model.add(LSTM(hoj_height))	# sehr wichtig
 
 	# voll vernetzte Schicht zum Herunterbrechen vorheriger Ausgabedaten auf die Menge der Klassen 
 	model.add(Dense(classes))
@@ -51,10 +47,10 @@ def lstm_init(save = False):
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
-	plot_model(model, to_file='model.png', show_shapes=True)
+	model.summary()
 
-	model = lstm_train(model, epochs=1, classes=classes)
-	score = lstm_validate(model, classes=classes)
+	model = lstm_train(model, classes, epochs=epochs)
+	score = lstm_validate(model, classes)
 
 
 	print("network creation succesful! \\(^o^)/")
@@ -85,47 +81,45 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, epochs=100, classes=61):
+def lstm_train(lstm_model, classes, epochs=100, ):
 	
 	print("train neural network...")
 	directories = os.listdir("lstm_train/")
 	# Trainingsepochen
-	for x in range(0,epochs):
-		print("Epoch: ", x+1, "/", epochs)
-		training_data = []
-		training_labels = []
+	training_data = []
+	training_labels = []
 
-		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
-		for directory in directories:
-			hoj_set, labels = get_hoj_data("lstm_train/" + directory, classes=classes)
-			training_data.append(hoj_set)
-			training_labels.append(labels)
-
-		print(training_data)
-		print(training_labels)
-			
-		# train neural network
-		history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=2) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil nur ein Datensatz nach dem Anderen Trainiert wird
-		print(history.history)
+	# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
+	for directory in directories:
+		hoj_set, labels = get_hoj_data("lstm_train/" + directory, classes)
+		training_data.append(hoj_set)
+		training_labels.append(labels)
+		
+	# train neural network
+	lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=epochs, batch_size=1, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
 	return lstm_model
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes=61):
+def lstm_validate(lstm_model, classes):
 	
 	print("evaluate neural network...")
 	directories = os.listdir("lstm_validate/")
+	validation_data = []
+	validation_labels = []
 
 		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
 	for directory in directories:
-		validation_data, validation_labels = get_hoj_data("lstm_validate/" + directory, classes=classes)
-		
-		# evaluate neural network
-		score = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=32) # batch_size willkuerlich
-		print(score)
+		data, labels = get_hoj_data("lstm_validate/" + directory, classes)
+		validation_data.append(data)
+		validation_labels.append(labels)
+	
+	# evaluate neural network
+	score = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1) # batch_size willkuerlich
+	print(score)
 	return score
 
 
-def get_hoj_data(directory, classes=61):
+def get_hoj_data(directory, classes):
 	hoj_set_files = os.listdir(directory)
 	data = []
 	hoj_set = []
@@ -167,6 +161,9 @@ def parseOpts( argv ):
 	# add arguments to the parser so he can parse the shit out of the command line
 	parser.add_argument("-t", "--test", action='store_true', dest='test_network', help="if set the created neural network won't be saved. (overites -p)")
 	parser.add_argument("-p", "--path", action='store', dest="lstm_path", help="The PATH where the lstm-model will be saved.")
+	parser.add_argument("-e", "--epochs", action='store', dest="lstm_epochs", help="The number of training epochs.")
+	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes.")
+	parser.add_argument("-s", "--input_size", action='store', dest="lstm_size", help="The number of input fields.")
 
 	# finally parse the command line 
 	args = parser.parse_args()
@@ -176,15 +173,33 @@ def parseOpts( argv ):
 	else:
 		lstm_path = None
 
+	if args.lstm_epochs:
+		lstm_epochs = int(args.lstm_epochs)
+	else:
+		lstm_epochs = 10
+
+	if args.lstm_classes:
+		lstm_classes = int(args.lstm_classes)
+	else:
+		lstm_classes = 1
+
+	if args.lstm_size:
+		lstm_size = int(args.lstm_size)
+	else:
+		lstm_size = 2
+
 	print ("\nConfiguration:")
-	print ("----------------------------------------------------------------------------------------------------------------------------")
-	print ("Lstm destination   : ", args.lstm_path)
+	print ("-----------------------------------------------------------------")
+	print ("Input size         : ", lstm_size)
+	print ("Output classes     : ", lstm_classes)
+	print ("Training Epochs    : ", lstm_epochs)
+	print ("Lstm destination   : ", lstm_path)
 	if args.test_network is True:
 		print("Network won't be saved!")
 	else:
 		print("Network will be saved")
 
-	return (not args.test_network), lstm_path
+	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
