@@ -141,7 +141,7 @@ def get_hoj_data(directory, classes):
 
 
 
-	return hoj_set, label
+	return hoj_set, labels
 
 
 		
