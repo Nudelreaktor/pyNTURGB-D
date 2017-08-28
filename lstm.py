@@ -123,7 +123,7 @@ def get_hoj_data(directory, classes):
 	hoj_set_files = os.listdir(directory)
 	data = []
 	hoj_set = []
-	labels = []
+	label = np.zeros(classes)
 	# alle dateien laden, in einer Matrix peichern
 	for hoj_file in hoj_set_files:
 		file = open(directory + "/" + hoj_file,'rb')
@@ -134,14 +134,9 @@ def get_hoj_data(directory, classes):
 		
 		# lade Labels (test output)
 		idx = int(directory[-3:])
-
-		label = np.zeros(classes)
 		label[idx] = 1
-		labels.append(label)
 
-
-
-	return hoj_set, labels
+	return hoj_set, label
 
 
 		
