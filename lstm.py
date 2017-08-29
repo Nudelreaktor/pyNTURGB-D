@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
+from keras.preprocessing import sequence
 
 # file dialog
 import tkinter as tk
@@ -94,9 +95,11 @@ def lstm_train(lstm_model, classes, epochs=100, ):
 		hoj_set, labels = get_hoj_data("lstm_train/" + directory, classes)
 		training_data.append(hoj_set)
 		training_labels.append(labels)
+
+	training_data = sequence.pad_sequences(np.array(training_data))
 		
 	# train neural network
-	lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=epochs, batch_size=1, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+	lstm_model.fit(training_data, np.array(training_labels), epochs=epochs, batch_size=1, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
 	return lstm_model
 
 #use this funktion to train the neural network
@@ -112,9 +115,11 @@ def lstm_validate(lstm_model, classes):
 		data, labels = get_hoj_data("lstm_validate/" + directory, classes)
 		validation_data.append(data)
 		validation_labels.append(labels)
+
+	validation_data = sequence.pad_sequences(np.array(validation_data))
 	
 	# evaluate neural network
-	score = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1) # batch_size willkuerlich
+	score = lstm_model.evaluate(validation_data, np.array(validation_labels), batch_size=1) # batch_size willkuerlich
 	print(score)
 	return score
 
