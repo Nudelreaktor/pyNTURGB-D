@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
+from keras.preprocessing import sequence
 
 # file dialog
 import tkinter as tk
@@ -45,7 +46,7 @@ def lstm_init(save = False):
 	# zur "Abkuehlung" des Netzwerkes
 	optimizer = RMSprop(lr=0.001)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
-	model.compile(loss='categorical_crossentropy', optimizer=optimizer)
+	model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
 	model.summary()
 
@@ -116,8 +117,9 @@ def lstm_validate(lstm_model, classes):
 		validation_labels.append(labels)
 	
 		# evaluate neural network
-		score = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
-		print(score)
+		score, accuracy = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1) # batch_size willkuerlich
+		print("Score:",score)
+		print("Accuracy:",accuracy)
 	return score
 
 
