@@ -46,7 +46,7 @@ def lstm_init(save = False):
 	# zur "Abkuehlung" des Netzwerkes
 	optimizer = RMSprop(lr=0.01)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
-	model.compile(loss='categorical_crossentropy', optimizer=optimizer)
+	model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
 	model.summary()
 
@@ -119,8 +119,9 @@ def lstm_validate(lstm_model, classes):
 	validation_data = sequence.pad_sequences(np.array(validation_data))
 	
 	# evaluate neural network
-	score = lstm_model.evaluate(validation_data, np.array(validation_labels), batch_size=1) # batch_size willkuerlich
-	print(score)
+	score, accuracy = lstm_model.evaluate(validation_data, np.array(validation_labels), batch_size=1) # batch_size willkuerlich
+	print("Score:",score)
+	print("Accuracy:",accuracy)
 	return score
 
 
