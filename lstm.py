@@ -44,7 +44,7 @@ def lstm_init(save = False):
 	
 	# lr = Learning rate
 	# zur "Abkuehlung" des Netzwerkes
-	optimizer = RMSprop(lr=0.01)
+	optimizer = RMSprop(lr=0.001)
 	# categorical_crossentropy -> ein Ausgang 1 der Rest 0
 	model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
