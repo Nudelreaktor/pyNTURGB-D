@@ -6,6 +6,7 @@ import numpy as np
 import math as ma
 import argparse
 import sys
+import random
 
 # keras import
 from keras.models import Sequential
@@ -82,7 +83,7 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=100, ):
+def lstm_train(lstm_model, classes, epochs=100):
 	
 	print("train neural network...")
 	directories = os.listdir("lstm_train/")
@@ -141,12 +142,19 @@ def get_hoj_data(directory, classes):
 		file.close()
 
 		hoj_set.append(hoj_array)
-		
-		# lade Labels (test output)
-		idx = int(directory[-3:])
-		label[idx] = 1
 
-	return hoj_set, label
+	# lade Labels (test output)
+	idx = int(directory[-3:])
+	label[idx] = 1
+
+	# select 8 elements from the hoj_set
+	buckets = np.array_split(np.array(hoj_set), 8)
+	selected_hoj_set = []
+
+	for bucket in buckets:
+		selected_hoj_set.append(random.sample(list(bucket),1)[0])
+
+	return np.array(selected_hoj_set), label
 
 
 		
