@@ -11,3 +11,4 @@ lstm_train_x/
 lstm_validate_x/
 lstm_model.h5
 *.h5
+testing.txt

@@ -25,7 +25,7 @@ def lstm_init(save = False):
 
 
 	# Parse the command line options.
-	save, lstm_path, epochs, classes, hoj_height = parseOpts( sys.argv )
+	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list = parseOpts( sys.argv )
 
 	print("creating neural network...")
 	# create neural network
@@ -51,8 +51,11 @@ def lstm_init(save = False):
 
 	model.summary()
 
-	model = lstm_train(model, classes, epochs=epochs)
-	score = lstm_validate(model, classes)
+	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list)
+	
+	if training_list is not None:
+		evaluation_path = training_path
+	score = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
 
 
 	print("network creation succesful! \\(^o^)/")
@@ -83,48 +86,50 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=100):
+def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None):
 	
 	print("train neural network...")
-	directories = os.listdir("lstm_train/")
+	directories = os.listdir(training_directory)
 	
 	# Trainingsepochen
 	for x in range(0,epochs):
 		print("Epoch", x+1, "/", epochs)
 		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
 		for directory in directories:
-			training_data = []
-			training_labels = []
-			hoj_set, labels = get_hoj_data("lstm_train/" + directory, classes)
-			training_data.append(hoj_set)
-			training_labels.append(labels)
-			
-			# train neural network
-			lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+			if to_train(training_list, os.path.basename(directory)):
+				training_data = []
+				training_labels = []
+				hoj_set, labels = get_hoj_data(training_directory + directory, classes)
+				training_data.append(hoj_set)
+				training_labels.append(labels)
+				
+				# train neural network
+				lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
 			
 	return lstm_model
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes):
+def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None):
 	
 	print("evaluate neural network...")
-	directories = os.listdir("lstm_validate/")
+	directories = os.listdir(evaluation_directory)
 	
 	accuracy = 0
 	n = 0
 
 		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
 	for directory in directories:
-		validation_data = []
-		validation_labels = []
-		data, labels = get_hoj_data("lstm_validate/" + directory, classes)
-		validation_data.append(data)
-		validation_labels.append(labels)
-	
-		# evaluate neural network
-		score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
-		accuracy = accuracy + acc
-		n += 1
+		if to_evaluate(training_list, os.path.basename(directory)):
+			validation_data = []
+			validation_labels = []
+			data, labels = get_hoj_data(evaluation_directory + directory, classes)
+			validation_data.append(data)
+			validation_labels.append(labels)
+		
+			# evaluate neural network
+			score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
+			accuracy = accuracy + acc
+			n += 1
 		
 	print("Accuracy",accuracy/n)
 	return score
@@ -163,7 +168,38 @@ def lstm_predict(lstm_model, hoj3d_set):
 	prediction = lstm_model.predict(hoj3d_set,batch_size = 1)
 	idx = nu.argmax(prediction)[0]
 	return idx,prediction[0][0][idx],prediction
+	
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+# A small function to skip actions which are not in the training_list
+def to_train( training_list, _skeleton_filename_ ):
+	# If an training_list is given 
+	if( training_list is not None ):
+		for key in training_list:
+			if( key in _skeleton_filename_ ):
+				# If the action of the skeleton file is in the training_list.
+				return True
+	# If no training_list is given
+	else:
+		return True
+
+	# If the action of the skeleton file is not in the training_list.
+	return False
+	
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# A small function to skip actions which are in the training_list
+def to_evaluate( training_list, _skeleton_filename_ ):
+	# If an training_list is given 
+	if( training_list is not None ):
+		for key in training_list:
+			if( key in _skeleton_filename_ ):
+				# If the action of the skeleton file is in the training_list.
+				return False
+
+	# If the action of the skeleton file is not in the training_list.
+	return True
+	
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Parse the command line arguments
@@ -177,6 +213,10 @@ def parseOpts( argv ):
 	parser.add_argument("-e", "--epochs", action='store', dest="lstm_epochs", help="The number of training epochs.")
 	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes.")
 	parser.add_argument("-s", "--input_size", action='store', dest="lstm_size", help="The number of input fields.")
+	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the training directory.")
+	parser.add_argument("-ep", "--evaluation_path", action='store', dest="evaluation_path", help="The path of the evaluation directory.")
+	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -aL S001,S002,S003,... (overrites -ep)")
+	
 
 	# finally parse the command line 
 	args = parser.parse_args()
@@ -200,6 +240,21 @@ def parseOpts( argv ):
 		lstm_size = int(args.lstm_size)
 	else:
 		lstm_size = 2
+	
+	if args.training_path:
+		training_path = args.training_path
+	else:
+		training_path = None
+	
+	if args.evaluation_path:
+		evaluation_path = args.evaluation_path
+	else:
+		evaluation_path = None
+		
+	if args.training_list:
+		training_list = args.training_list.split(",")
+	else:
+		training_list = None
 
 	print ("\nConfiguration:")
 	print ("-----------------------------------------------------------------")
@@ -212,7 +267,7 @@ def parseOpts( argv ):
 	else:
 		print("Network will be saved")
 
-	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size
+	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
