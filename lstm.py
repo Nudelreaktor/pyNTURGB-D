@@ -52,7 +52,7 @@ def lstm_init(save = False):
 
 	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list)
 	
-	if training_list is None:
+	if training_list is not None:
 		evaluation_path = training_path
 	score = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
 
