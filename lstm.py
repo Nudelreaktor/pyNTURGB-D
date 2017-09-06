@@ -53,9 +53,9 @@ def lstm_init(save = False):
 
 	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list)
 	
-	if training_list is not None:
-		evaluation_path = training_path
-	score = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
+	#if training_list is not None:
+	#	evaluation_path = training_path
+	#score = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
 
 
 	print("network creation succesful! \\(^o^)/")
@@ -90,11 +90,12 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
-	
+	directories_len = len(directories)
 	# Trainingsepochen
 	for x in range(0,epochs):
 		print("Epoch", x+1, "/", epochs)
 		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
+		idx = 0
 		for directory in directories:
 			if to_train(training_list, os.path.basename(directory)):
 				training_data = []
@@ -105,6 +106,9 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 				
 				# train neural network
 				lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+			
+			idx = idx+1
+			print(idx, "/", directories_len, end="\r")
 			
 	return lstm_model
 
