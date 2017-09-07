@@ -117,9 +117,11 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 	
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
+	directories_len = len(directories)
 	
 	accuracy = 0
 	n = 0
+	idx = 0
 
 		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
 	for directory in directories:
@@ -134,6 +136,9 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 			score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
 			accuracy = accuracy + acc
 			n += 1
+					
+		idx = idx+1
+		print(idx, "/", directories_len, end="\r")
 		
 	print("Accuracy",accuracy/n)
 	return score
