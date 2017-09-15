@@ -136,7 +136,7 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 		idx = idx+1
 		print(idx, "/", directories_len, end="\r")
 	# evaluate neural network
-	score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
+	score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=32, verbose=0) # batch_size willkuerlich
 			
 	print("Accuracy:",acc)
 	return score
