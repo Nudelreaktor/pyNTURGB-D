@@ -157,7 +157,7 @@ def get_hoj_data(directory, classes):
 
 	# lade Labels (test output)
 	idx = int(directory[-3:])
-	label[idx] = 1
+	label[idx - 1] = 1
 
 	# select 8 elements from the hoj_set
 	buckets = np.array_split(np.array(hoj_set), 8)
