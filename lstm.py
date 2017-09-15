@@ -95,20 +95,20 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 	for x in range(0,epochs):
 		print("Epoch", x+1, "/", epochs)
 		# lade und tainiere jeden HoJ-Ordner im Trainingsverzeichnis
+		training_data = []
+		training_labels = []
 		idx = 0
 		for directory in directories:
 			if to_train(training_list, os.path.basename(directory)):
-				training_data = []
-				training_labels = []
 				hoj_set, labels = get_hoj_data(training_directory + directory, classes)
 				training_data.append(hoj_set)
 				training_labels.append(labels)
-				
-				# train neural network
-				lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=1, verbose=0) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
-			
 			idx = idx+1
-			print(idx, "/", directories_len, end="\r")
+			print("Loading ... ", idx, "/", directories_len, end="\r")
+				
+		# train neural network
+		lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+			
 			
 	return lstm_model
 
@@ -118,6 +118,8 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
 	directories_len = len(directories)
+	validation_data = []
+	validation_labels = []
 	
 	accuracy = 0
 	n = 0
@@ -126,21 +128,17 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
 	for directory in directories:
 		if to_evaluate(training_list, os.path.basename(directory)):
-			validation_data = []
-			validation_labels = []
 			data, labels = get_hoj_data(evaluation_directory + directory, classes)
 			validation_data.append(data)
 			validation_labels.append(labels)
 		
-			# evaluate neural network
-			score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
-			accuracy = accuracy + acc
-			n += 1
 					
 		idx = idx+1
 		print(idx, "/", directories_len, end="\r")
-		
-	print("Accuracy",accuracy/n)
+	# evaluate neural network
+	score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=1, verbose=0) # batch_size willkuerlich
+			
+	print("Accuracy:",acc)
 	return score
 
 
