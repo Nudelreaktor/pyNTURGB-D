@@ -22,11 +22,11 @@ import lstm
 def lstm_re_train():
 	
 	# Parse the command line options.
-	lstm_path, epochs, classes, training_path, training_list = parseOpts( sys.argv )
+	lstm_path, classes, training_path, training_list, dataset_pickle, label_pickle = parseOpts( sys.argv )
 
 	model = lstm.lstm_load(lstm_path)
 	
-	lstm.lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list)
+	lstm.lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle, label_pickle_file=label_pickle)
 
 
 	
@@ -39,10 +39,11 @@ def parseOpts( argv ):
 	parser = argparse.ArgumentParser()
 	# add arguments to the parser so he can parse the shit out of the command line
 	parser.add_argument("-p", "--path", action='store', dest="lstm_path", help="The PATH where the lstm-model will be saved.")
-	parser.add_argument("-e", "--epochs", action='store', dest="lstm_epochs", help="The number of training epochs.")
 	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes.")
-	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the training directory.")
+	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the evaluation directory.")
 	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -aL S001,S002,S003,... (overrites -ep)")
+	parser.add_argument("-dp", "--dataset_pickle", action='store', dest="dataset_pickle", help="The path to the dataset pickle object. (requires -lp)")
+	parser.add_argument("-lp", "--label_pickle", action='store', dest="label_pickle", help="The path to the labels pickle object. (requires -dp)")
 	
 
 	# finally parse the command line 
@@ -52,11 +53,6 @@ def parseOpts( argv ):
 		lstm_path = args.lstm_path
 	else:
 		lstm_path = None
-
-	if args.lstm_epochs:
-		lstm_epochs = int(args.lstm_epochs)
-	else:
-		lstm_epochs = 10
 
 	if args.lstm_classes:
 		lstm_classes = int(args.lstm_classes)
@@ -73,13 +69,22 @@ def parseOpts( argv ):
 	else:
 		training_list = None
 
+	if args.dataset_pickle:
+		dataset_pickle = args.dataset_pickle
+	else:
+		dataset_pickle = ""
+	
+	if args.label_pickle:
+		label_pickle = args.label_pickle
+	else:
+		label_pickle = ""
+
 	print ("\nConfiguration:")
 	print ("-----------------------------------------------------------------")
 	print ("Output classes     : ", lstm_classes)
-	print ("Training Epochs    : ", lstm_epochs)
 	print ("Lstm destination   : ", lstm_path)
 
-	return lstm_path, lstm_epochs, lstm_classes, training_path, training_list
+	return lstm_path, lstm_epochs, training_path, training_list, dataset_pickle, label_pickle
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

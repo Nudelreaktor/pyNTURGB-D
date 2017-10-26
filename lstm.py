@@ -7,6 +7,10 @@ import math as ma
 import argparse
 import sys
 import random
+import time
+import datetime
+import json
+import pickle
 
 # keras import
 from keras.models import Sequential
@@ -25,7 +29,7 @@ def lstm_init(save = False):
 
 
 	# Parse the command line options.
-	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list = parseOpts( sys.argv )
+	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path = parseOpts( sys.argv )
 
 	print("creating neural network...")
 	# create neural network
@@ -33,8 +37,18 @@ def lstm_init(save = False):
 	model = Sequential()
 
 	# LSTM Schichten hinzufuegen
-	model.add(LSTM(hoj_height, input_shape=(None,hoj_height), return_sequences=True))
-	model.add(LSTM(hoj_height))	# sehr wichtig
+	if(len(layer_sizes) == 1):
+		model.add(LSTM(int(layer_sizes[0]), input_shape=(None,hoj_height)))
+	else:
+		for i in range(len(layer_sizes)):
+			if i == 0:
+				model.add(LSTM(int(layer_sizes[i]), input_shape=(None,hoj_height), return_sequences=True))
+			else:
+				if i == len(layer_sizes) - 1:
+					model.add(LSTM(int(layer_sizes[i])))	# sehr wichtig
+				else:
+					model.add(LSTM(int(layer_sizes[i]), return_sequences=True))
+
 
 	# voll vernetzte Schicht zum Herunterbrechen vorheriger Ausgabedaten auf die Menge der Klassen 
 	model.add(Dense(classes))
@@ -51,7 +65,7 @@ def lstm_init(save = False):
 
 	model.summary()
 
-	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list)
+	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path)
 	
 	#if training_list is not None:
 	#	evaluation_path = training_path
@@ -86,11 +100,33 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None):
+def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file=""):
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
 	directories_len = len(directories)
+
+	complete_hoj_data = None
+
+	#create timestamp for filenames
+	timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+
+	# create a history file
+	history_file_name = "history_" + timestamp + ".json"
+	history_file = open(history_file_name,"wt")
+
+
+	dataset_pickle_object = None
+	labels_pickle_object = None
+	if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
+		dataset_file = open(dataset_pickle_file,"rb")
+		dataset_pickle_object = pickle.load(dataset_file)
+		dataset_file.close()
+
+		label_file = open(label_pickle_file,"rb")
+		labels_pickle_object = pickle.load(label_file)
+		label_file.close()
+
 	# Trainingsepochen
 	for x in range(0,epochs):
 		print("Epoch", x+1, "/", epochs)
@@ -98,22 +134,43 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 		training_data = []
 		training_labels = []
 		idx = 0
-		for directory in directories:
-			if to_train(training_list, os.path.basename(directory)):
-				hoj_set, labels = get_hoj_data(training_directory + directory, classes)
-				training_data.append(hoj_set)
-				training_labels.append(labels)
-			idx = idx+1
-			print("Loading ... ", idx, "/", directories_len, end="\r")
-				
+
+		# read dataset and labels
+		
+		if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
+			# eight buckets
+			for _set in dataset_pickle_object:
+				# select 8 elements from the hoj_set
+				buckets = np.array_split(np.array(_set), 8)
+				selected_set = []
+
+				for bucket in buckets:
+					selected_set.append(random.sample(list(bucket),1)[0])
+				training_data.append(selected_set)
+
+			training_labels = labels_pickle_object
+
+
+		else:
+			for directory in directories:
+				if to_train(training_list, os.path.basename(directory)):
+					hoj_set, labels = get_hoj_data(training_directory + directory, classes)
+					training_data.append(hoj_set)
+					training_labels.append(labels)
+				idx = idx+1
+				print("Loading ... ", idx, "/", directories_len, end="\r")
+
 		# train neural network
-		lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
-			
+		training_history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+		json.dump(training_history.history,history_file)
+		history_file.write("\n")
+	
+	history_file.close()
 			
 	return lstm_model
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None):
+def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file=""):
 	
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
@@ -125,16 +182,41 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 	n = 0
 	idx = 0
 
+	# read dataset and labels
+	
+	if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
+
+		dataset_file = open(dataset_pickle_file,"rb")
+		dataset_pickle_object = pickle.load(dataset_file)
+		dataset_file.close()
+
+		label_file = open(label_pickle_file,"rb")
+		labels_pickle_object = pickle.load(label_file)
+		label_file.close()
+
+		# eight buckets
+		for _set in dataset_pickle_object:
+			# select 8 elements from the hoj_set
+			buckets = np.array_split(np.array(_set), 8)
+			selected_set = []
+
+			for bucket in buckets:
+				selected_set.append(random.sample(list(bucket),1)[0])
+			validation_data.append(selected_set)
+
+		validation_labels = labels_pickle_object
+
+	else:
 		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
-	for directory in directories:
-		if to_evaluate(training_list, os.path.basename(directory)):
-			data, labels = get_hoj_data(evaluation_directory + directory, classes)
-			validation_data.append(data)
-			validation_labels.append(labels)
-		
-					
-		idx = idx+1
-		print(idx, "/", directories_len, end="\r")
+		for directory in directories:
+			if to_evaluate(training_list, os.path.basename(directory)):
+				data, labels = get_hoj_data(evaluation_directory + directory, classes)
+				validation_data.append(data)
+				validation_labels.append(labels)
+			
+						
+			idx = idx+1
+			print(idx, "/", directories_len, end="\r")
 	# evaluate neural network
 	score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=32, verbose=0) # batch_size willkuerlich
 			
@@ -142,7 +224,7 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 	return score
 
 
-def get_hoj_data(directory, classes):
+def get_hoj_data(directory, classes, pickle_file=""):
 	hoj_set_files = os.listdir(directory)
 	data = []
 	hoj_set = []
@@ -222,7 +304,11 @@ def parseOpts( argv ):
 	parser.add_argument("-s", "--input_size", action='store', dest="lstm_size", help="The number of input fields.")
 	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the training directory.")
 	parser.add_argument("-ep", "--evaluation_path", action='store', dest="evaluation_path", help="The path of the evaluation directory.")
-	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -aL S001,S002,S003,... (overrites -ep)")
+	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -tl S001,S002,S003,... (overrites -ep)")
+	parser.add_argument("-ls", "--layer_sizes", action='store', dest='layer_sizes', help="A list of sizes of the LSTM layers (standart: -ls 16,16)")
+	parser.add_argument("-dp", "--dataset_pickle", action='store', dest="dataset_pickle", help="The path to the dataset pickle object. (requires -lp)")
+	parser.add_argument("-lp", "--label_pickle", action='store', dest="label_pickle", help="The path to the labels pickle object. (requires -dp)")
+
 	
 
 	# finally parse the command line 
@@ -263,6 +349,21 @@ def parseOpts( argv ):
 	else:
 		training_list = None
 
+	if args.layer_sizes:
+		layer_sizes = args.layer_sizes.split(",")
+	else:
+		layer_sizes = [16,16]
+
+	if args.dataset_pickle:
+		dataset_pickle = args.dataset_pickle
+	else:
+		dataset_pickle = ""
+	
+	if args.label_pickle:
+		label_pickle = args.label_pickle
+	else:
+		label_pickle = ""
+
 	print ("\nConfiguration:")
 	print ("-----------------------------------------------------------------")
 	print ("Input size         : ", lstm_size)
@@ -274,7 +375,7 @@ def parseOpts( argv ):
 	else:
 		print("Network will be saved")
 
-	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list
+	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle, label_pickle
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
