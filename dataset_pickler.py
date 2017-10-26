@@ -119,7 +119,7 @@ def parseOpts( argv ):
 	parser.add_argument("-d", "--dataset_path", action='store', dest="dataset_path", help="The path of the saved dataset.")
 	parser.add_argument("-l", "--labels_path", action='store', dest="labels_path", help="The path of the saved labels.")
 	parser.add_argument("-vd", "--validation_dataset_path", action='store', dest="validation_dataset_path", help="The path of the saved labels.")
-	parser.add_argument("-vl", "--validation_labels_path", action='store', dest="labels_path", help="The path of the saved labels.")
+	parser.add_argument("-vl", "--validation_labels_path", action='store', dest="validation_labels_path", help="The path of the saved labels.")
 
 	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -tl S001,S002,S003,... (overrites -ep)")
 	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes.")	
