@@ -19,6 +19,9 @@ from keras.optimizers import RMSprop
 from keras.layers import Dense, Activation, LSTM
 from keras.preprocessing import sequence
 
+# confusion matrix
+from sklearn.metrics import confusion_matrix
+
 # file dialog
 import tkinter as tk
 from tkinter import filedialog
@@ -29,7 +32,7 @@ def lstm_init(save = False):
 
 
 	# Parse the command line options.
-	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path = parseOpts( sys.argv )
+	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path, sample_strategy = parseOpts( sys.argv )
 
 	print("creating neural network...")
 	# create neural network
@@ -65,7 +68,7 @@ def lstm_init(save = False):
 
 	model.summary()
 
-	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path)
+	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path, _sample_strategy=sample_strategy)
 	
 	#if training_list is not None:
 	#	evaluation_path = training_path
@@ -100,7 +103,7 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file=""):
+def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random"):
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
@@ -140,12 +143,10 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 		if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
 			# eight buckets
 			for _set in dataset_pickle_object:
-				# select 8 elements from the hoj_set
-				buckets = np.array_split(np.array(_set), 8)
-				selected_set = []
 
-				for bucket in buckets:
-					selected_set.append(random.sample(list(bucket),1)[0])
+				selected_set = get_eight_buckets(_set, _sample_strategy)
+
+
 				training_data.append(selected_set)
 
 			training_labels = labels_pickle_object
@@ -170,7 +171,7 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 	return lstm_model
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file=""):
+def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", create_confusion_matrix=False, _sample_strategy="random"):
 	
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
@@ -196,12 +197,9 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 
 		# eight buckets
 		for _set in dataset_pickle_object:
-			# select 8 elements from the hoj_set
-			buckets = np.array_split(np.array(_set), 8)
-			selected_set = []
 
-			for bucket in buckets:
-				selected_set.append(random.sample(list(bucket),1)[0])
+			selected_set = get_eight_buckets(_set, _sample_strategy)
+
 			validation_data.append(selected_set)
 
 		validation_labels = labels_pickle_object
@@ -217,14 +215,37 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 						
 			idx = idx+1
 			print(idx, "/", directories_len, end="\r")
+
+
 	# evaluate neural network
 	score, acc = lstm_model.evaluate(np.array(validation_data), np.array(validation_labels), batch_size=32, verbose=0) # batch_size willkuerlich
 			
 	print("Accuracy:",acc)
-	return score
+
+	if create_confusion_matrix is True:
+		predictions = lstm_model.predict(np.array(validation_data),batch_size = 32)
+		
+		predicted_labels = []
+		real_labels = []
+
+		for k in range(len(predictions)):
+			predicted_idx = np.argmax(predictions[k])
+
+			label_idx = np.argmax(validation_labels[k])
+			
+			real_labels.append(label_idx)
+			predicted_labels.append(predicted_idx)
 
 
-def get_hoj_data(directory, classes, pickle_file=""):
+		cnf_matrix = confusion_matrix(real_labels, predicted_labels)
+		cnf_matrix = cnf_matrix.astype('float') / cnf_matrix.sum(axis=1)[:, np.newaxis]
+		return score, acc, cnf_matrix
+
+
+	return score, acc, None
+
+
+def get_hoj_data(directory, classes):
 	hoj_set_files = os.listdir(directory)
 	data = []
 	hoj_set = []
@@ -241,12 +262,7 @@ def get_hoj_data(directory, classes, pickle_file=""):
 	idx = int(directory[-3:])
 	label[idx - 1] = 1
 
-	# select 8 elements from the hoj_set
-	buckets = np.array_split(np.array(hoj_set), 8)
-	selected_hoj_set = []
-
-	for bucket in buckets:
-		selected_hoj_set.append(random.sample(list(bucket),1)[0])
+	selected_hoj_set = get_eight_buckets(hoj_set)
 
 	return np.array(selected_hoj_set), label
 
@@ -255,7 +271,7 @@ def get_hoj_data(directory, classes, pickle_file=""):
 # use this funktion to evaluate data in the neural network
 def lstm_predict(lstm_model, hoj3d_set):
 	prediction = lstm_model.predict(hoj3d_set,batch_size = 1)
-	idx = nu.argmax(prediction)[0]
+	idx = np.argmax(prediction)[0]
 	return idx,prediction[0][0][idx],prediction
 	
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -288,6 +304,50 @@ def to_evaluate( training_list, _skeleton_filename_ ):
 
 	# If the action of the skeleton file is not in the training_list.
 	return True
+
+
+def get_eight_buckets( hoj_set, _sample_strategy="random" ):
+
+	# Get some informations about the data
+	number_of_frames = len(hoj_set)
+	_number_of_subframes = 8
+	frame = []
+
+	# Compute the size of the 8 buckets depending of the number of frames of the set.
+	bucket_size = ma.floor( number_of_frames / _number_of_subframes )
+	remain = number_of_frames - ( bucket_size * _number_of_subframes )
+	gap = ma.floor(remain / 2.0)
+
+	# Take a random frame from each bucket and store it as array entry in the _svm_structure ( 8 per )
+	for k in range(0,_number_of_subframes):
+
+		# Choose the sampling strategy
+		# First frame per bucket
+		if( _sample_strategy == "first"):
+			random_frame_number = int(gap+(k*bucket_size)+1)
+		# Mid frame per bucket
+		elif( _sample_strategy == "mid"):
+			random_frame_number = int(gap+(k*bucket_size)+int(ma.floor(bucket_size/2)))
+		# Last frame per bucket
+		elif( _sample_strategy == "last"):
+			random_frame_number = int(gap+(k*bucket_size)+bucket_size)
+		# Random frame per bucket
+		else:
+			# Get the random frame -> randint(k(BS),k+1(BS)) ==> k-1(B) < randomInt < k(B)
+			random_frame_number = random.randint((gap+(k*bucket_size)),(gap+((k+1)*bucket_size)) )
+
+		# Convert the frame to the svm structure 
+		# Get the random frame and the corresponding label
+		if( random_frame_number > 0 ):
+			# Collect the data from the 8 buckets in a list.
+			frame.append(hoj_set[random_frame_number-1]);
+		else:
+			# Collect the data from the 8 buckets in a list.
+			frame.append(hoj_set[random_frame_number]);
+
+	return frame
+
+
 	
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -308,6 +368,7 @@ def parseOpts( argv ):
 	parser.add_argument("-ls", "--layer_sizes", action='store', dest='layer_sizes', help="A list of sizes of the LSTM layers (standart: -ls 16,16)")
 	parser.add_argument("-dp", "--dataset_pickle", action='store', dest="dataset_pickle", help="The path to the dataset pickle object. (requires -lp)")
 	parser.add_argument("-lp", "--label_pickle", action='store', dest="label_pickle", help="The path to the labels pickle object. (requires -dp)")
+	parser.add_argument("-bs", "--bucket_strategy", action='store', dest='bucket_strategy', help="random, first, mid, last")
 
 	
 
@@ -375,7 +436,7 @@ def parseOpts( argv ):
 	else:
 		print("Network will be saved")
 
-	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle, label_pickle
+	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle, label_pickle, args.bucket_strategy
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

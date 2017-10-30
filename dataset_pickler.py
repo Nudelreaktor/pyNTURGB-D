@@ -30,8 +30,8 @@ def dataset_pickler():
 
 		dataset_path = "dataset_" + timestamp
 		labels_path = "labels_" + timestamp
-		validation_dataset_path = "dataset_" + timestamp
-		validation_labels_path = "labels_" + timestamp
+		validation_dataset_path = "dataset_v_" + timestamp
+		validation_labels_path = "labels_v_" + timestamp
 		print("new dataset file", dataset_path)
 
 	directories = os.listdir(training_directory)
@@ -158,11 +158,16 @@ def parseOpts( argv ):
 	else:
 		validation_labels_path = None
 
+	if args.lstm_classes:
+		lstm_classes = int(args.lstm_classes)
+	else:
+		lstm_classes = 2
+
 
 	print ("\nConfiguration:")
 	print ("-----------------------------------------------------------------")
 
-	return directory, training_list, dataset_path, labels_path, int(args.lstm_classes), validation_dataset_path, validation_labels_path
+	return directory, training_list, dataset_path, labels_path, lstm_classes, validation_dataset_path, validation_labels_path
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 

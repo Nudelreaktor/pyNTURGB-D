@@ -7,6 +7,8 @@ import math as ma
 import argparse
 import sys
 
+from PIL import Image
+
 # keras import
 from keras.models import Sequential
 from keras.models import load_model
@@ -22,12 +24,25 @@ import lstm
 def lstm_re_train():
 	
 	# Parse the command line options.
-	lstm_path, classes, training_path, training_list, dataset_pickle, label_pickle = parseOpts( sys.argv )
+	lstm_path, classes, training_path, training_list, dataset_pickle, label_pickle, create_confusion_matrix = parseOpts( sys.argv )
 
 	model = lstm.lstm_load(lstm_path)
 	
-	lstm.lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle, label_pickle_file=label_pickle)
+	score, acc, confusion_matrix = lstm.lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle, label_pickle_file=label_pickle, create_confusion_matrix=create_confusion_matrix )
 
+	if create_confusion_matrix is True:
+		print("confusion Martix here")
+		print(confusion_matrix)
+
+		# bonus create Bitmap image of results
+		img = Image.new('RGB',(len(confusion_matrix) * 10,len(confusion_matrix) * 10),"black")
+		pixels = img.load()
+
+		for i in range(img.size[0]):
+			for j in range (img.size[1]):
+				pixels[i,j] = (0,int(confusion_matrix[int(j/10),int(i/10)] * 255),0)
+
+		img.save('confusion_matrix.bmp')
 
 	
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -44,6 +59,7 @@ def parseOpts( argv ):
 	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -aL S001,S002,S003,... (overrites -ep)")
 	parser.add_argument("-dp", "--dataset_pickle", action='store', dest="dataset_pickle", help="The path to the dataset pickle object. (requires -lp)")
 	parser.add_argument("-lp", "--label_pickle", action='store', dest="label_pickle", help="The path to the labels pickle object. (requires -dp)")
+	parser.add_argument("-cm", "--confusion_matrix", action='store_true', dest="confusion_matrix", help="set and confusion Matrix will be created")
 	
 
 	# finally parse the command line 
@@ -84,7 +100,7 @@ def parseOpts( argv ):
 	print ("Output classes     : ", lstm_classes)
 	print ("Lstm destination   : ", lstm_path)
 
-	return lstm_path, lstm_epochs, training_path, training_list, dataset_pickle, label_pickle
+	return lstm_path, lstm_classes, training_path, training_list, dataset_pickle, label_pickle, args.confusion_matrix
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
