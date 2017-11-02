@@ -26,6 +26,9 @@ from sklearn.metrics import confusion_matrix
 import tkinter as tk
 from tkinter import filedialog
 
+# local
+import dataset_reader as dr
+import single_hoj_set as sh_set
 
 
 def lstm_init(save = False):
@@ -119,16 +122,14 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 	history_file = open(history_file_name,"wt")
 
 
-	dataset_pickle_object = None
-	labels_pickle_object = None
-	if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
-		dataset_file = open(dataset_pickle_file,"rb")
-		dataset_pickle_object = pickle.load(dataset_file)
-		dataset_file.close()
 
-		label_file = open(label_pickle_file,"rb")
-		labels_pickle_object = pickle.load(label_file)
-		label_file.close()
+	# read dataset
+	if(os.path.isfile(dataset_pickle_file)):
+		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes)
+	else:
+		dataset, dataset_size = dr.load_data(byte_object=False, data_path=training_directory)
+
+	training_dataset = dr.devide_dataset(_data=dataset, _training_list=training_list)[0]
 
 	# Trainingsepochen
 	for x in range(0,epochs):
@@ -138,28 +139,9 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 		training_labels = []
 		idx = 0
 
-		# read dataset and labels
-		
-		if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
-			# eight buckets
-			for _set in dataset_pickle_object:
-
-				selected_set = get_eight_buckets(_set, _sample_strategy)
-
-
-				training_data.append(selected_set)
-
-			training_labels = labels_pickle_object
-
-
-		else:
-			for directory in directories:
-				if to_train(training_list, os.path.basename(directory)):
-					hoj_set, labels = get_hoj_data(training_directory + directory, classes)
-					training_data.append(hoj_set)
-					training_labels.append(labels)
-				idx = idx+1
-				print("Loading ... ", idx, "/", directories_len, end="\r")
+		for _obj in training_dataset:
+			training_data.append(get_eight_buckets(_obj.get_hoj_set()))
+			training_labels.append(_obj.get_hoj_label()[0])
 
 		# train neural network
 		training_history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
@@ -185,36 +167,21 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 
 	# read dataset and labels
 	
-	if(os.path.isfile(dataset_pickle_file) and os.path.isfile(label_pickle_file)):
+	if(os.path.isfile(dataset_pickle_file):
 
-		dataset_file = open(dataset_pickle_file,"rb")
-		dataset_pickle_object = pickle.load(dataset_file)
-		dataset_file.close()
-
-		label_file = open(label_pickle_file,"rb")
-		labels_pickle_object = pickle.load(label_file)
-		label_file.close()
-
-		# eight buckets
-		for _set in dataset_pickle_object:
-
-			selected_set = get_eight_buckets(_set, _sample_strategy)
-
-			validation_data.append(selected_set)
-
-		validation_labels = labels_pickle_object
+		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes)
 
 	else:
-		# lade und validiere jeden HoJ-Ordner im Validierungsverzeichnis
-		for directory in directories:
-			if to_evaluate(training_list, os.path.basename(directory)):
-				data, labels = get_hoj_data(evaluation_directory + directory, classes)
-				validation_data.append(data)
-				validation_labels.append(labels)
-			
-						
-			idx = idx+1
-			print(idx, "/", directories_len, end="\r")
+		dataset, dataset_size = dr.load_data(byte_object=False, data_path=evaluation_directory)
+
+	if training_list is not None:
+		evaluation_dataset = dr.devide_dataset(_data=dataset, _training_list=training_list)[2]
+	else:
+		evaluation_dataset = dataset
+
+	for _obj in evaluation_dataset:
+		validation_data.append(get_eight_buckets(_obj.get_hoj_set()))
+		validation_labels.append(_obj.get_hoj_label()[0])
 
 
 	# evaluate neural network
