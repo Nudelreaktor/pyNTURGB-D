@@ -84,14 +84,14 @@ def lstm_init(save = False):
 	
 	#if training_list is not None:
 	#	evaluation_path = training_path
-	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
+	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, create_confusion_matrix=True)
 
 	end_time = time.time()
 
 	timeDiff = datetime.timedelta(seconds=end_time - start_time)
 
 	# print statistics
-	if not os.path.exists("clf_statistics/")
+	if not os.path.exists("clf_statistics/"):
 		os.makedirs("clf_statistics/")
 	filename = "clf_statistics/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".clfStats"
 
@@ -108,7 +108,7 @@ def lstm_init(save = False):
 	print("network creation succesful! \\(^o^)/")
 
 	# save confusion matrix 
-	file = open("clf_statistics/confusion_matrix.conf_matrix", "wt")
+	file = open("clf_statistics/" + timestamp + "_lstm_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + "_confusion_matrix.conf_matrix", "wt")
 	writer = csv.writer(file)
 	writer.writerows(cnf_matrix)
 	# bonus create Bitmap image of confusion matrix
@@ -119,7 +119,7 @@ def lstm_init(save = False):
 		for j in range (img.size[1]):
 			pixels[i,j] = (0,int(cnf_matrix[int(j/10),int(i/10)] * 255),0)
 
-	img.save('clf_statistics/confusion_matrix.bmp')
+	img.save("clf_statistics/" + timestamp + "_lstm_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + "_confusion_matrix.bmp")
 	
 	
 	# save neural network
@@ -127,7 +127,7 @@ def lstm_init(save = False):
 		if lstm_path is not None:
 			model.save(lstm_path)
 		else:
-			if not os.path.exists("classifiers/")
+			if not os.path.exists("classifiers/"):
 				os.makedirs("classifiers/")
 			filename = "classifiers/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".h5"
 			model.save(filename)
@@ -197,7 +197,7 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 
 	# read dataset and labels
 	
-	if(os.path.isfile(dataset_pickle_file):
+	if(os.path.isfile(dataset_pickle_file)):
 
 		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes)
 
@@ -235,7 +235,8 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 
 
 		cnf_matrix = confusion_matrix(real_labels, predicted_labels)
-		cnf_matrix = cnf_matrix.astype('float') / cnf_matrix.sum(axis=1)[:, np.newaxis]
+
+		cnf_matrix = cnf_matrix.astype('float') / (cnf_matrix.sum(axis=1) if cnf_matrix.sum(axis=1) is not 0 else 1) [:, np.newaxis]
 		return score, acc, cnf_matrix
 
 

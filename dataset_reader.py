@@ -8,7 +8,7 @@ import math
 import random
 import copy
 
-import cPickle as pickle
+import pickle
 import numpy as np
 import time as tM
 import datetime as dT
