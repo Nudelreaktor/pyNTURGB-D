@@ -11,6 +11,9 @@ import time
 import datetime
 import json
 import pickle
+import csv
+
+from PIL import Image
 
 # keras import
 from keras.models import Sequential
@@ -103,6 +106,20 @@ def lstm_init(save = False):
 	f.write("------------------------------------------------------------------\n")
 	f.close()
 	print("network creation succesful! \\(^o^)/")
+
+	# save confusion matrix 
+	file = open("clf_statistics/confusion_matrix.conf_matrix", "wt")
+	writer = csv.writer(file)
+	writer.writerows(cnf_matrix)
+	# bonus create Bitmap image of confusion matrix
+	img = Image.new('RGB',(len(cnf_matrix) * 10,len(cnf_matrix) * 10),"black")
+	pixels = img.load()
+
+	for i in range(img.size[0]):
+		for j in range (img.size[1]):
+			pixels[i,j] = (0,int(cnf_matrix[int(j/10),int(i/10)] * 255),0)
+
+	img.save('clf_statistics/confusion_matrix.bmp')
 	
 	
 	# save neural network
