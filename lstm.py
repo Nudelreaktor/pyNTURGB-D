@@ -31,6 +31,9 @@ import dataset_reader as dr
 import single_hoj_set as sh_set
 
 
+timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M')
+
+
 def lstm_init(save = False):
 
 
@@ -38,6 +41,9 @@ def lstm_init(save = False):
 	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path, sample_strategy = parseOpts( sys.argv )
 
 	print("creating neural network...")
+
+	start_time = time.time()
+
 	# create neural network
 	# 2 Layer LSTM
 	model = Sequential()
@@ -75,9 +81,27 @@ def lstm_init(save = False):
 	
 	#if training_list is not None:
 	#	evaluation_path = training_path
-	#score = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
+	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list)
 
+	end_time = time.time()
 
+	timeDiff = datetime.timedelta(seconds=end_time - start_time)
+
+	# print statistics
+	if not os.path.exists("clf_statistics/")
+		os.makedirs("clf_statistics/")
+	filename = "clf_statistics/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".clfStats"
+
+	f = open(filename, "wt")	
+	f.write("\nNetwork was created and trained in : "+str(timeDiff)+" s\n" )
+	f.write("------------------------------------------------------------------\n")
+	f.write("\n")
+	f.write("Prediction Accuracy: "+str(acc))
+	f.write("\n")
+	f.write("Network score      : "+str(score))
+	f.write("\n")
+	f.write("------------------------------------------------------------------\n")
+	f.close()
 	print("network creation succesful! \\(^o^)/")
 	
 	
@@ -86,10 +110,10 @@ def lstm_init(save = False):
 		if lstm_path is not None:
 			model.save(lstm_path)
 		else:
-			# Open a save dialog
-			f = filedialog.asksaveasfilename(title="store model", filetypes=(("Model files","*.h5"),("all files","*.*")))
-			if f is not None and f is not "":
-				model.save(f + ".h5")
+			if not os.path.exists("classifiers/")
+				os.makedirs("classifiers/")
+			filename = "classifiers/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".h5"
+			model.save(filename)
 
 	return model
 	
@@ -106,20 +130,13 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random"):
+def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random"):
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
 	directories_len = len(directories)
 
 	complete_hoj_data = None
-
-	#create timestamp for filenames
-	timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-
-	# create a history file
-	history_file_name = "history_" + timestamp + ".json"
-	history_file = open(history_file_name,"wt")
 
 
 
@@ -145,10 +162,6 @@ def lstm_train(lstm_model, classes, epochs=100, training_directory="lstm_train/"
 
 		# train neural network
 		training_history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
-		json.dump(training_history.history,history_file)
-		history_file.write("\n")
-	
-	history_file.close()
 			
 	return lstm_model
 

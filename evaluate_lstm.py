@@ -6,6 +6,7 @@ import numpy as np
 import math as ma
 import argparse
 import sys
+import csv
 
 from PIL import Image
 
@@ -31,6 +32,10 @@ def lstm_re_train():
 	score, acc, confusion_matrix = lstm.lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle, label_pickle_file=label_pickle, create_confusion_matrix=create_confusion_matrix )
 
 	if create_confusion_matrix is True:
+		file = open("confusion_matrix.conf_matrix", "wt")
+		writer = csv.writer(file)
+		writer.writerows(confusion_matrix)
+
 		print("confusion Martix here")
 		print(confusion_matrix)
 
