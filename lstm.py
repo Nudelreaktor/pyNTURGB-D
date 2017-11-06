@@ -43,6 +43,8 @@ def lstm_init(save = False):
 	# Parse the command line options.
 	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path, sample_strategy = parseOpts( sys.argv )
 
+	filename_base = timestamp + "_" + "lstm" + "_c" + str(classes) + "_e" + str(epochs) + "_" + "-".join(str(x) for x in layer_sizes)
+
 	print("creating neural network...")
 
 	start_time = time.time()
@@ -80,11 +82,11 @@ def lstm_init(save = False):
 
 	model.summary()
 
-	model = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path, _sample_strategy=sample_strategy)
+	model, histories = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path, _sample_strategy=sample_strategy, number_of_entries=hoj_height)
 	
 	#if training_list is not None:
 	#	evaluation_path = training_path
-	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, create_confusion_matrix=True)
+	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, create_confusion_matrix=True, number_of_entries=hoj_height)
 
 	end_time = time.time()
 
@@ -93,10 +95,14 @@ def lstm_init(save = False):
 	# print statistics
 	if not os.path.exists("clf_statistics/"):
 		os.makedirs("clf_statistics/")
-	filename = "clf_statistics/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".clfStats"
+	filename = "clf_statistics/" + filename_base + ".clfStats"
 
 	f = open(filename, "wt")	
-	f.write("\nNetwork was created and trained in : "+str(timeDiff)+" s\n" )
+	f.write("Network was created and trained in : "+str(timeDiff)+" s\n" )
+	f.write("------------------------------------------------------------------\n")
+	for x in range(0,len(histories)):
+
+		f.write("Training epoch : "+str(x+1)+"\tloss: "+str(histories[x]['loss'])+"\tacc: "+str(histories[x]["acc"])+"\n")
 	f.write("------------------------------------------------------------------\n")
 	f.write("\n")
 	f.write("Prediction Accuracy: "+str(acc))
@@ -108,7 +114,15 @@ def lstm_init(save = False):
 	print("network creation succesful! \\(^o^)/")
 
 	# save confusion matrix 
-	file = open("clf_statistics/" + timestamp + "_lstm_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + "_confusion_matrix.conf_matrix", "wt")
+	###############################################################
+	#
+	# confusion matrix:
+	# vertical true label
+	# horrizontal predicted label
+	#
+	###############################################################
+
+	file = open("clf_statistics/" + filename_base + "_confusion_matrix.conf_matrix", "wt")
 	writer = csv.writer(file)
 	writer.writerows(cnf_matrix)
 	# bonus create Bitmap image of confusion matrix
@@ -117,9 +131,13 @@ def lstm_init(save = False):
 
 	for i in range(img.size[0]):
 		for j in range (img.size[1]):
-			pixels[i,j] = (0,int(cnf_matrix[int(j/10),int(i/10)] * 255),0)
+			if int(i/10) == int(j/10):
+				pixels[i,j] = (0,int(cnf_matrix[int(j/10),int(i/10)] * 255),0)
+			else:
+				pixels[i,j] = (int(cnf_matrix[int(j/10),int(i/10)] * 255),0,0)
 
-	img.save("clf_statistics/" + timestamp + "_lstm_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + "_confusion_matrix.bmp")
+
+	img.save("clf_statistics/" + filename_base + "_confusion_matrix.bmp")
 	
 	
 	# save neural network
@@ -129,7 +147,7 @@ def lstm_init(save = False):
 		else:
 			if not os.path.exists("classifiers/"):
 				os.makedirs("classifiers/")
-			filename = "classifiers/" + timestamp + "_" + "lstm" + "_" + str(classes) + "_" + "-".join(str(x) for x in layer_sizes) + ".h5"
+			filename = "classifiers/" + filename_base + ".h5"
 			model.save(filename)
 
 	return model
@@ -147,21 +165,22 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random"):
+def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random", number_of_entries=168):
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
 	directories_len = len(directories)
 
 	complete_hoj_data = None
+	histories = []
 
 
 
 	# read dataset
 	if(os.path.isfile(dataset_pickle_file)):
-		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes)
+		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes, number_of_entries=number_of_entries)
 	else:
-		dataset, dataset_size = dr.load_data(byte_object=False, data_path=training_directory)
+		dataset, dataset_size = dr.load_data(byte_object=False, data_path=training_directory, number_of_entries=number_of_entries)
 
 	training_dataset = dr.devide_dataset(_data=dataset, _training_list=training_list)[0]
 
@@ -179,11 +198,12 @@ def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/",
 
 		# train neural network
 		training_history = lstm_model.fit(np.array(training_data), np.array(training_labels), epochs=1, batch_size=32, verbose=1) # epochen 1, weil außerhald abgehandelt; batch_size 1, weil data_sets unterschiedliche anzahl an Frames
+		histories.append(training_history.history)
 			
-	return lstm_model
+	return lstm_model, histories
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", create_confusion_matrix=False, _sample_strategy="random"):
+def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", create_confusion_matrix=False, _sample_strategy="random", number_of_entries=168):
 	
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
@@ -199,10 +219,10 @@ def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", train
 	
 	if(os.path.isfile(dataset_pickle_file)):
 
-		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes)
+		dataset, dataset_size = dr.load_data(byte_object=True, data_object_path=dataset_pickle_file, classes=classes, number_of_entries=number_of_entries)
 
 	else:
-		dataset, dataset_size = dr.load_data(byte_object=False, data_path=evaluation_directory)
+		dataset, dataset_size = dr.load_data(byte_object=False, data_path=evaluation_directory, number_of_entries=number_of_entries)
 
 	if training_list is not None:
 		evaluation_dataset = dr.devide_dataset(_data=dataset, _training_list=training_list)[2]

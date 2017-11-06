@@ -18,7 +18,7 @@ import single_hoj_set as sh_set
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 # Load data 
 
-def load_data( byte_object=False, entities=10, data_path="", data_object_path="", classes=61, _verbose=False ):
+def load_data( byte_object=False, entities=10, data_path="", data_object_path="", classes=61, _verbose=False, number_of_entries=168 ):
 
 	# Variables for statistics
 	computational_start_time = tM.time()
@@ -34,7 +34,7 @@ def load_data( byte_object=False, entities=10, data_path="", data_object_path=""
 	else: # Else, load the data from the data path.
 		print("------------------------------------------------------------------\n")
 		print("LD :: Load data from path.")
-		_data, _dir_counter = load_data_from_path( data_path, classes, _verbose )
+		_data, _dir_counter = load_data_from_path( data_path, classes, _verbose, number_of_entries )
 
 	computational_end_time = tM.time()
 	timeDiff = dT.timedelta(seconds=computational_end_time - computational_start_time)
@@ -45,7 +45,7 @@ def load_data( byte_object=False, entities=10, data_path="", data_object_path=""
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 # Load helper for data from a set ( no previous pickled objects )
 
-def load_data_from_path( data_path="", _classes=61, _verbose=False ):
+def load_data_from_path( data_path="", _classes=61, _verbose=False, number_of_entries=168 ):
 
 	_fileCounter = 0
 	_dir_Counter = 0
@@ -75,7 +75,7 @@ def load_data_from_path( data_path="", _classes=61, _verbose=False ):
 
 		# Load the whole dataset
 		_dir_Counter = _dir_Counter + 1
-		_hoj_set, _number_of_files_in_set = get_data_from_subdirectory(exact_data_path, _classes, _fileCounter, _verbose)
+		_hoj_set, _number_of_files_in_set = get_data_from_subdirectory(exact_data_path, _classes, _fileCounter, _verbose, number_of_entries)
 		_data.append( _hoj_set )
 
 		_fileCounter = _fileCounter + _number_of_files_in_set
@@ -89,7 +89,7 @@ def load_data_from_path( data_path="", _classes=61, _verbose=False ):
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 # Get the data of a single sequence 
 
-def get_data_from_subdirectory( directory="empty", classes=61, fileCounter=0, verbose=False ):
+def get_data_from_subdirectory( directory="empty", classes=61, fileCounter=0, verbose=False, number_of_entries=168 ):
 	
 	# A single label
 	label = np.zeros(classes)
@@ -111,7 +111,7 @@ def get_data_from_subdirectory( directory="empty", classes=61, fileCounter=0, ve
 		print('GDFSD :: Files in set: ', number_of_set_files)
 
 	# Create a hoj_set with the correct size ( number_of_set_files x descriptor length )
-	hoj_set = np.zeros((number_of_set_files,168))
+	hoj_set = np.zeros((number_of_set_files,number_of_entries))
 
 	# Load each file and store the content in the hoj_set
 	for hoj_file in hoj_set_files:
@@ -119,14 +119,14 @@ def get_data_from_subdirectory( directory="empty", classes=61, fileCounter=0, ve
 		# Increase the filecounter
 		fileCounter+=1
 
-		file = open(directory + "/" + hoj_file,'r')
+		file = open(directory + "/" + hoj_file,'rb')
 
 		# Load the actual data file
 		hoj_array = np.array(np.load(file))
 		file.close()
 
 		# Reshape the structure and add it to the whole set database
-		hoj_array = np.reshape(hoj_array,(1,168))
+		hoj_array = hoj_array.flatten()
 		hoj_set[fileCounter-1] = hoj_array
 
 		# lade Labels (test output)
