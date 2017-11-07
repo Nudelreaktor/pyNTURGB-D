@@ -151,7 +151,7 @@ def load_pickles( _path, _object="data" ):
 
 	if _object is "data":
 		with open( _path, 'rb') as f:
-			_data = pickle.load(f)
+			_data = pickle.load(f, encoding='latin1')
 			_dir_counter = len(_data)
 			number_of_files = 0
 			for _obj in _data:
