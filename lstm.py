@@ -34,7 +34,7 @@ import dataset_reader as dr
 import single_hoj_set as sh_set
 
 
-timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M')
+timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
 
 
 def lstm_init(save = False):
