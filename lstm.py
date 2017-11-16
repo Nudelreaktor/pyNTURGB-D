@@ -41,7 +41,7 @@ def lstm_init(save = False):
 
 
 	# Parse the command line options.
-	save, lstm_path, epochs, classes, hoj_height, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle_path, label_pickle_path, sample_strategy = parseOpts( sys.argv )
+	save, lstm_path, epochs, classes, hoj_height, training_path, training_list, layer_sizes, dataset_pickle_path, sample_strategy = parseOpts( sys.argv )
 
 	filename_base = timestamp + "_" + "lstm" + "_c" + str(classes) + "_e" + str(epochs) + "_" + "-".join(str(x) for x in layer_sizes)
 
@@ -62,7 +62,7 @@ def lstm_init(save = False):
 				model.add(LSTM(int(layer_sizes[i]), input_shape=(None,hoj_height), return_sequences=True))
 			else:
 				if i == len(layer_sizes) - 1:
-					model.add(LSTM(int(layer_sizes[i])))	# sehr wichtig
+					model.add(LSTM(int(layer_sizes[i])))
 				else:
 					model.add(LSTM(int(layer_sizes[i]), return_sequences=True))
 
@@ -82,11 +82,11 @@ def lstm_init(save = False):
 
 	model.summary()
 
-	model, histories = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, label_pickle_file=label_pickle_path, _sample_strategy=sample_strategy, number_of_entries=hoj_height)
+	model, histories = lstm_train(model, classes, epochs=epochs, training_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, _sample_strategy=sample_strategy, number_of_entries=hoj_height)
 	
-	#if training_list is not None:
+	
 	#	evaluation_path = training_path
-	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=evaluation_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, create_confusion_matrix=True, number_of_entries=hoj_height)
+	score, acc, cnf_matrix = lstm_validate(model, classes, evaluation_directory=training_path, training_list=training_list, dataset_pickle_file=dataset_pickle_path, create_confusion_matrix=True, number_of_entries=hoj_height)
 
 	end_time = time.time()
 
@@ -165,7 +165,7 @@ def lstm_load(filename = None):
 		return load_model(f)
 
 #use this funktion to train the neural network
-def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", _sample_strategy="random", number_of_entries=168):
+def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/", training_list=None, dataset_pickle_file="", _sample_strategy="random", number_of_entries=168):
 	
 	print("train neural network...")
 	directories = os.listdir(training_directory)
@@ -203,7 +203,7 @@ def lstm_train(lstm_model, classes, epochs=10, training_directory="lstm_train/",
 	return lstm_model, histories
 
 #use this funktion to train the neural network
-def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", label_pickle_file="", create_confusion_matrix=False, _sample_strategy="random", number_of_entries=168):
+def lstm_validate(lstm_model, classes, evaluation_directory="lstm_train/", training_list=None, dataset_pickle_file="", create_confusion_matrix=False, _sample_strategy="random", number_of_entries=168):
 	
 	print("evaluate neural network...")
 	directories = os.listdir(evaluation_directory)
@@ -375,18 +375,22 @@ def parseOpts( argv ):
 	# generate parser object
 	parser = argparse.ArgumentParser()
 	# add arguments to the parser so he can parse the shit out of the command line
-	parser.add_argument("-t", "--test", action='store_true', dest='test_network', help="if set the created neural network won't be saved. (overites -p)")
-	parser.add_argument("-p", "--path", action='store', dest="lstm_path", help="The PATH where the lstm-model will be saved.")
-	parser.add_argument("-e", "--epochs", action='store', dest="lstm_epochs", help="The number of training epochs.")
-	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes.")
-	parser.add_argument("-s", "--input_size", action='store', dest="lstm_size", help="The number of input fields.")
-	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the training directory.")
-	parser.add_argument("-ep", "--evaluation_path", action='store', dest="evaluation_path", help="The path of the evaluation directory.")
-	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -tl S001,S002,S003,... (overrites -ep)")
+
+	# dataset parameters
+	parser.add_argument("-dop", "--data_object_path", action='store', dest="data_object_path", help="The path to the data_object. (required or -tp)")
+	parser.add_argument("-tp", "--training_path", action='store', dest="training_path", help="The path of the training directory. (required or -dp)")
+	parser.add_argument("-tl", "--training_list", action='store', dest='training_list', help="A list of training feature in the form: -tl S001,S002,S003,...")
+
+	# classifier parameters
+	parser.add_argument("-s", "--input_size", action='store', dest="lstm_size", help="The number of input fields. (required)")
+	parser.add_argument("-c", "--classes", action='store', dest="lstm_classes", help="The number of output classes. (required)")
+	parser.add_argument("-e", "--epochs", action='store', dest="lstm_epochs", help="The number of training epochs. (required)")
 	parser.add_argument("-ls", "--layer_sizes", action='store', dest='layer_sizes', help="A list of sizes of the LSTM layers (standart: -ls 16,16)")
-	parser.add_argument("-dp", "--dataset_pickle", action='store', dest="dataset_pickle", help="The path to the dataset pickle object. (requires -lp)")
-	parser.add_argument("-lp", "--label_pickle", action='store', dest="label_pickle", help="The path to the labels pickle object. (requires -dp)")
-	parser.add_argument("-bs", "--bucket_strategy", action='store', dest='bucket_strategy', help="random, first, mid, last")
+	parser.add_argument("-bs", "--bucket_strategy", action='store', dest='bucket_strategy', help="Defines the strategy of the set subsampling. [first | mid | last | random]")
+
+	# general control parameters
+	parser.add_argument("-p", "--path", action='store', dest="lstm_path", help="The PATH where the lstm-model will be saved.")
+	parser.add_argument("-t", "--test", action='store_true', dest='test_network', help="if set the created neural network won't be saved. (overrites -p)")
 
 	
 
@@ -417,11 +421,6 @@ def parseOpts( argv ):
 		training_path = args.training_path
 	else:
 		training_path = None
-	
-	if args.evaluation_path:
-		evaluation_path = args.evaluation_path
-	else:
-		evaluation_path = None
 		
 	if args.training_list:
 		training_list = args.training_list.split(",")
@@ -433,15 +432,10 @@ def parseOpts( argv ):
 	else:
 		layer_sizes = [16,16]
 
-	if args.dataset_pickle:
-		dataset_pickle = args.dataset_pickle
+	if args.data_object_path:
+		data_object_path = args.data_object_path
 	else:
-		dataset_pickle = ""
-	
-	if args.label_pickle:
-		label_pickle = args.label_pickle
-	else:
-		label_pickle = ""
+		data_object_path = ""
 
 	print ("\nConfiguration:")
 	print ("-----------------------------------------------------------------")
@@ -454,7 +448,7 @@ def parseOpts( argv ):
 	else:
 		print("Network will be saved")
 
-	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, evaluation_path, training_list, layer_sizes, dataset_pickle, label_pickle, args.bucket_strategy
+	return (not args.test_network), lstm_path, lstm_epochs, lstm_classes, lstm_size, training_path, training_list, layer_sizes, data_object_path, args.bucket_strategy
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
